@@ -6,7 +6,7 @@ import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/l
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
 
-contract SportsBetting is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface {
+contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface {
 
     using FunctionsRequest for FunctionsRequest.Request;
     bytes32 public donId;
@@ -226,7 +226,7 @@ contract SportsBetting is FunctionsClient, ConfirmedOwner, AutomationCompatibleI
 
         currentMatch.swept = true;
 
-        (bool success, ) = payable(owner).call{value: amount}("");
+        (bool success, ) = payable(owner()).call{value: amount}("");
         require(success, "Sweep transfer failed");
 
         emit FundsSwept(_matchId, amount);
