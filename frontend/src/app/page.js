@@ -134,6 +134,12 @@ export default function Home() {
       setBetAmount("");
       alert("¡Apuesta realizada con éxito!");
     } catch (error) {
+      if (error?.message?.includes("insufficient funds")) {
+        setErrorMessage(
+          "Saldo insuficiente en tu wallet para hacer esta apuesta o pagar el gas.",
+        );
+        return;
+      }
       let decoded = decodeError(error);
       setErrorMessage(decoded.error || "Error al realizar la apuesta");
     }
@@ -151,34 +157,36 @@ export default function Home() {
       setErrorMessage(decoded.error || "Error al reclamar las ganancias");
     }
   };
-
   return (
-    <div
-      className="container"
-      style={{ padding: "20px", fontFamily: "sans-serif" }}
-    >
-      {!account ? (
-        <button onClick={configureBlockchain}>Conectar MetaMask</button>
-      ) : (
-        <p>
-          Wallet Conectada: {account.substring(0, 6)}...{account.substring(38)}
-        </p>
-      )}
+    <div className="container">
+      {/* HEADER */}
+      <div className="header">
+        <h1 className="title">⚽ DBet</h1>
+        {!account ? (
+          <button onClick={configureBlockchain}>Conectar MetaMask</button>
+        ) : (
+          <div className="wallet-badge">
+            🟢 {account.substring(0, 6)}...{account.substring(38)}
+          </div>
+        )}
+      </div>
 
       {errorMessage && (
-        <div style={{ color: "red", margin: "10px 0" }}>{errorMessage}</div>
+        <div className="error-message">
+          <span>{errorMessage}</span>
+          <button
+            className="close-error-btn"
+            onClick={() => setErrorMessage("")}
+            title="Cerrar mensaje"
+          >
+            &times;
+          </button>
+        </div>
       )}
 
-      <div
-        className="card"
-        style={{
-          border: "1px solid #ccc",
-          padding: "15px",
-          marginBottom: "20px",
-        }}
-      >
-        <h2>Crear Nuevo Partido (Solo Admin)</h2>
-        <div>
+      <div className="card">
+        <h2>🛠️ Crear Nuevo Partido (Admin)</h2>
+        <div className="form-group">
           <input
             type="number"
             placeholder="ID Equipo Local"
@@ -200,87 +208,106 @@ export default function Home() {
         </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          border: "1px solid #ccc",
-          padding: "15px",
-          marginBottom: "20px",
-        }}
-      >
-        <h2>Partidos Disponibles</h2>
+      <div className="card">
+        <h2>🏆 Partidos Disponibles</h2>
         {matches.length === 0 ? (
-          <p>No hay partidos activos.</p>
+          <p style={{ color: "var(--text-muted)" }}>
+            No hay partidos activos en este momento.
+          </p>
         ) : (
-          <ul>
-            {matches.map((match) => (
-              <li
-                key={match.id}
-                style={{ cursor: "pointer", color: "blue", margin: "10px 0" }}
-                onClick={() => setSelectedMatch(match)}
-              >
-                Partido #{match.id}: Equipo {match.teamA} vs Equipo{" "}
-                {match.teamB}
-                {match.isResolved ? " (Finalizado)" : " (Abierto)"}
-              </li>
-            ))}
+          <ul className="match-list">
+            {matches.map((match) => {
+              // COMPROBACIÓN DE TIEMPO Y ESTADO
+              const currentTime = Math.floor(Date.now() / 1000);
+              const hasStarted = currentTime >= match.startTime;
+
+              let statusText = "Abierto para apuestas";
+              let statusClass = "status-open";
+
+              if (match.isResolved) {
+                statusText = "Finalizado";
+                statusClass = "status-resolved";
+              } else if (hasStarted) {
+                statusText = "En juego (Cerrado)";
+                statusClass = "status-playing";
+              }
+
+              return (
+                <li
+                  key={match.id}
+                  className="match-item"
+                  onClick={() => setSelectedMatch(match)}
+                >
+                  <div>
+                    <strong>Partido #{match.id}:</strong> Equipo {match.teamA}{" "}
+                    vs Equipo {match.teamB}
+                  </div>
+                  <span className={`match-status ${statusClass}`}>
+                    {statusText}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
 
       {selectedMatch && (
-        <div
-          className="card"
-          style={{ border: "1px solid #ccc", padding: "15px" }}
-        >
+        <div className="card" style={{ border: "1px solid var(--primary)" }}>
           <h2>Detalles del Partido #{selectedMatch.id}</h2>
-          <p>
+          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
             <strong>Inicio:</strong>{" "}
             {new Date(selectedMatch.startTime * 1000).toLocaleString()}
           </p>
-          <p>
-            <strong>Estado:</strong>{" "}
-            {selectedMatch.isResolved ? "Finalizado" : "Pendiente"}
-          </p>
 
           {selectedMatch.isResolved && selectedMatch.winningTeam !== 0 && (
-            <p>
-              <strong>Ganador:</strong>{" "}
+            <div
+              style={{
+                backgroundColor: "rgba(59, 130, 246, 0.1)",
+                padding: "10px",
+                borderRadius: "8px",
+                marginBottom: "20px",
+              }}
+            >
+              <strong>Ganador Oficial:</strong>{" "}
               {selectedMatch.winningTeam === 3
                 ? "Empate"
                 : `Equipo ${selectedMatch.winningTeam}`}
-            </p>
+            </div>
           )}
 
           {!selectedMatch.isResolved ? (
-            <div style={{ marginTop: "15px" }}>
-              <h3>Hacer una apuesta</h3>
-              <select
-                value={selectedTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
-                style={{ marginRight: "10px" }}
-              >
-                <option value="1">
-                  Victoria Local (Equipo {selectedMatch.teamA})
-                </option>
-                <option value="2">
-                  Victoria Visitante (Equipo {selectedMatch.teamB})
-                </option>
-                <option value="3">Empate</option>
-              </select>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                placeholder="ETH a apostar"
-                value={betAmount}
-                onChange={(e) => setBetAmount(e.target.value)}
-              />
-              <button onClick={placeBet}>Pujar</button>
+            <div>
+              <h3 style={{ marginTop: 0, fontSize: "16px" }}>
+                Hacer una apuesta
+              </h3>
+              <div className="form-group">
+                <select
+                  value={selectedTeam}
+                  onChange={(e) => setSelectedTeam(e.target.value)}
+                >
+                  <option value="1">
+                    Victoria Local (Equipo {selectedMatch.teamA})
+                  </option>
+                  <option value="2">
+                    Victoria Visitante (Equipo {selectedMatch.teamB})
+                  </option>
+                  <option value="3">Empate</option>
+                </select>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="ETH a apostar"
+                  value={betAmount}
+                  onChange={(e) => setBetAmount(e.target.value)}
+                />
+                <button onClick={placeBet}>Enviar Apuesta</button>
+              </div>
             </div>
           ) : (
-            <div style={{ marginTop: "15px" }}>
-              <button onClick={claimReward}>Reclamar Premio</button>
+            <div>
+              <button onClick={claimReward}>🎁 Reclamar Premio</button>
             </div>
           )}
         </div>
