@@ -11,9 +11,10 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     using FunctionsRequest for FunctionsRequest.Request;
     bytes32 public donId;
     uint64 public subscriptionId;
-    uint32 public gasLimit = 300000;
+    uint256 public updateInterval;
 
-    uint256 public updateInterval = 7 days;
+    uint32 public gasLimit = 300000;
+    
     uint256 public lastTimeStamp;
     string public fetchMatchesSourceCode;
 

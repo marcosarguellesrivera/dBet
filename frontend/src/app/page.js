@@ -3,10 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { Contract, ethers } from "ethers";
 import detectEthereumProvider from "@metamask/detect-provider";
 import { decodeError } from "@ubiquity-os/ethers-decode-error";
-
 import DBetManifest from "../contracts/DBet.json";
 
-const CONTRACT_ADDRESS = "0x772575E330C1385aEe86253aC9308f910d29983D";
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
 export default function Home() {
   const contractRef = useRef(null);
