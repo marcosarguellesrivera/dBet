@@ -26,10 +26,10 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     mapping(bytes32 => RequestType) public requestTypes;
 
     struct MatchData {
-        uint8 teamA;
-        uint8 teamB;
+        uint16 teamA;
+        uint16 teamB;
         bool isResolved;
-        uint8 winningTeam; 
+        uint16 winningTeam; 
         bool betsOpen;
         uint256 startTime;
         uint256 endTime; 
@@ -40,7 +40,7 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
 
     struct BetData {
         uint256 amount;
-        uint8 selectedTeam; 
+        uint16 selectedTeam; 
         bool hasClaimed;
     }
     
@@ -48,9 +48,9 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     mapping(uint256 => mapping(address => BetData)) public userBets;
     mapping(bytes32 => uint256) public requestToMatchId;
 
-    event MatchCreated(uint256 indexed matchId, uint8 teamA, uint8 teamB, uint256 startTime);
-    event BetPlaced(uint256 indexed matchId, address indexed user, uint8 team, uint256 amount);
-    event MatchResolved(uint256 indexed matchId, uint8 winningTeam);
+    event MatchCreated(uint256 indexed matchId, uint16 teamA, uint16 teamB, uint256 startTime);
+    event BetPlaced(uint256 indexed matchId, address indexed user, uint16 team, uint256 amount);
+    event MatchResolved(uint256 indexed matchId, uint16 winningTeam);
     event RewardClaimed(uint256 indexed matchId, address indexed user, uint256 rewardAmount);
     event FundsSwept(uint256 indexed matchId, uint256 amount);
     event MatchResultRequested(bytes32 indexed requestId, uint256 indexed matchId);
@@ -84,7 +84,7 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
 
     function performUpkeep(bytes calldata) external override {
         require((block.timestamp - lastTimeStamp) > updateInterval, "Not time yet");
-        lastTimeStamp = block.timestamp; // Reseteamos el reloj
+        lastTimeStamp = block.timestamp;
 
         FunctionsRequest.Request memory req;
         req.initializeRequestForInlineJavaScript(fetchMatchesSourceCode);
@@ -97,11 +97,11 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     }
 
     // Creación manual por si el Automation falla o quieres añadir uno rápido
-    function createMatch(uint8 _teamA, uint8 _teamB, uint256 _startTime) external onlyOwner {
+    function createMatch(uint16 _teamA, uint16 _teamB, uint256 _startTime) external onlyOwner {
         _createMatchInternal(_teamA, _teamB, _startTime);
     }
 
-    function _createMatchInternal(uint8 _teamA, uint8 _teamB, uint256 _startTime) internal {
+    function _createMatchInternal(uint16 _teamA, uint16 _teamB, uint256 _startTime) internal {
         require(_startTime > block.timestamp, "Match start time must be in the future");
 
         matchCounter++;
@@ -146,12 +146,11 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
         RequestType reqType = requestTypes[requestId];
 
         if (reqType == RequestType.ResolveMatch) {
-            // Lógica original: Resolver un partido existente
             uint256 matchId = requestToMatchId[requestId];
             require(!matches[matchId].isResolved, "Match already resolved");
 
             uint256 winningTeamUint = abi.decode(response, (uint256));
-            uint8 winningTeam = uint8(winningTeamUint);
+            uint16 winningTeam = uint16(winningTeamUint);
 
             require(winningTeam >= 1 && winningTeam <= 3, "Invalid winner selection");
 
@@ -164,15 +163,15 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
         } else if (reqType == RequestType.CreateMatch) {
             uint256 packed = abi.decode(response, (uint256));
 
-            uint8 teamB = uint8(packed);
-            uint8 teamA = uint8(packed >> 8);
-            uint256 startTime = uint256(uint64(packed >> 16));
+            uint16 teamB = uint16(packed);
+            uint16 teamA = uint16(packed >> 16);
+            uint256 startTime = uint256(uint64(packed >> 32));
             
             _createMatchInternal(teamA, teamB, startTime);
         }
     }
 
-    function bet(uint256 _matchId, uint8 _team) external payable {
+    function bet(uint256 _matchId, uint16 _team) external payable {
         require(block.timestamp < matches[_matchId].startTime, "Match has started, betting is closed");
         require(msg.value >= MINIMUM_BET, "Bet amount too low");
         require(!matches[_matchId].isResolved, "Match already resolved");

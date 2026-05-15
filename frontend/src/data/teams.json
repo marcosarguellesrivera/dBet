@@ -1,0 +1,210 @@
+{
+  "57": {
+    "name": "Arsenal FC",
+    "crest": "https://crests.football-data.org/57.png"
+  },
+  "58": {
+    "name": "Aston Villa FC",
+    "crest": "https://crests.football-data.org/58.png"
+  },
+  "61": {
+    "name": "Chelsea FC",
+    "crest": "https://crests.football-data.org/61.png"
+  },
+  "62": {
+    "name": "Everton FC",
+    "crest": "https://crests.football-data.org/62.png"
+  },
+  "63": {
+    "name": "Fulham FC",
+    "crest": "https://crests.football-data.org/63.png"
+  },
+  "64": {
+    "name": "Liverpool FC",
+    "crest": "https://crests.football-data.org/64.png"
+  },
+  "65": {
+    "name": "Manchester City FC",
+    "crest": "https://crests.football-data.org/65.png"
+  },
+  "66": {
+    "name": "Manchester United FC",
+    "crest": "https://crests.football-data.org/66.png"
+  },
+  "67": {
+    "name": "Newcastle United FC",
+    "crest": "https://crests.football-data.org/67.png"
+  },
+  "73": {
+    "name": "Tottenham Hotspur FC",
+    "crest": "https://crests.football-data.org/73.png"
+  },
+  "76": {
+    "name": "Wolverhampton Wanderers",
+    "crest": "https://crests.football-data.org/76.png"
+  },
+  "351": {
+    "name": "Nottingham Forest FC",
+    "crest": "https://crests.football-data.org/351.png"
+  },
+  "354": {
+    "name": "Crystal Palace FC",
+    "crest": "https://crests.football-data.org/354.png"
+  },
+  "397": {
+    "name": "Brighton & Hove Albion",
+    "crest": "https://crests.football-data.org/397.png"
+  },
+  "402": {
+    "name": "Brentford FC",
+    "crest": "https://crests.football-data.org/402.png"
+  },
+  "563": {
+    "name": "West Ham United FC",
+    "crest": "https://crests.football-data.org/563.png"
+  },
+  "1044": {
+    "name": "AFC Bournemouth",
+    "crest": "https://crests.football-data.org/1044.png"
+  },
+  "77": {
+    "name": "Athletic Club",
+    "crest": "https://crests.football-data.org/77.png"
+  },
+  "78": {
+    "name": "Club Atlético de Madrid",
+    "crest": "https://crests.football-data.org/78.png"
+  },
+  "79": {
+    "name": "CA Osasuna",
+    "crest": "https://crests.football-data.org/79.png"
+  },
+  "80": {
+    "name": "RCD Espanyol",
+    "crest": "https://crests.football-data.org/80.png"
+  },
+  "81": {
+    "name": "FC Barcelona",
+    "crest": "https://crests.football-data.org/81.png"
+  },
+  "82": {
+    "name": "Getafe CF",
+    "crest": "https://crests.football-data.org/82.png"
+  },
+  "86": {
+    "name": "Real Madrid CF",
+    "crest": "https://crests.football-data.org/86.png"
+  },
+  "87": {
+    "name": "Rayo Vallecano",
+    "crest": "https://crests.football-data.org/87.png"
+  },
+  "89": {
+    "name": "RCD Mallorca",
+    "crest": "https://crests.football-data.org/89.png"
+  },
+  "90": {
+    "name": "Real Betis Balompié",
+    "crest": "https://crests.football-data.org/90.png"
+  },
+  "92": {
+    "name": "Real Sociedad de Fútbol",
+    "crest": "https://crests.football-data.org/92.png"
+  },
+  "94": {
+    "name": "Villarreal CF",
+    "crest": "https://crests.football-data.org/94.png"
+  },
+  "95": {
+    "name": "Valencia CF",
+    "crest": "https://crests.football-data.org/95.png"
+  },
+  "263": {
+    "name": "Deportivo Alavés",
+    "crest": "https://crests.football-data.org/263.png"
+  },
+  "275": {
+    "name": "UD Las Palmas",
+    "crest": "https://crests.football-data.org/275.png"
+  },
+  "260": {
+    "name": "Girona FC",
+    "crest": "https://crests.football-data.org/298.png"
+  },
+  "558": {
+    "name": "RC Celta de Vigo",
+    "crest": "https://crests.football-data.org/558.png"
+  },
+  "559": {
+    "name": "Sevilla FC",
+    "crest": "https://crests.football-data.org/559.png"
+  },
+  "98": {
+    "name": "AC Milan",
+    "crest": "https://crests.football-data.org/98.png"
+  },
+  "99": {
+    "name": "ACF Fiorentina",
+    "crest": "https://crests.football-data.org/99.png"
+  },
+  "100": {
+    "name": "AS Roma",
+    "crest": "https://crests.football-data.org/100.png"
+  },
+  "102": {
+    "name": "Atalanta BC",
+    "crest": "https://crests.football-data.org/102.png"
+  },
+  "103": {
+    "name": "Bologna FC 1909",
+    "crest": "https://crests.football-data.org/103.png"
+  },
+  "104": {
+    "name": "Cagliari Calcio",
+    "crest": "https://crests.football-data.org/104.png"
+  },
+  "107": {
+    "name": "Genoa CFC",
+    "crest": "https://crests.football-data.org/107.png"
+  },
+  "108": {
+    "name": "FC Internazionale Milano",
+    "crest": "https://crests.football-data.org/108.png"
+  },
+  "109": {
+    "name": "Juventus FC",
+    "crest": "https://crests.football-data.org/109.png"
+  },
+  "110": {
+    "name": "SS Lazio",
+    "crest": "https://crests.football-data.org/110.png"
+  },
+  "113": {
+    "name": "SSC Napoli",
+    "crest": "https://crests.football-data.org/113.png"
+  },
+  "115": {
+    "name": "Udinese Calcio",
+    "crest": "https://crests.football-data.org/115.png"
+  },
+  "116": {
+    "name": "Sampdoria",
+    "crest": "https://crests.football-data.org/116.png"
+  },
+  "118": {
+    "name": "Torino FC",
+    "crest": "https://crests.football-data.org/118.png"
+  },
+  "119": {
+    "name": "Hellas Verona FC",
+    "crest": "https://crests.football-data.org/119.png"
+  },
+  "445": {
+    "name": "Empoli FC",
+    "crest": "https://crests.football-data.org/445.png"
+  },
+  "1106": {
+    "name": "US Lecce",
+    "crest": "https://crests.football-data.org/1106.png"
+  }
+}

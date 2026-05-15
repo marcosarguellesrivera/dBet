@@ -4,6 +4,7 @@ import { Contract, ethers } from "ethers";
 import detectEthereumProvider from "@metamask/detect-provider";
 import { decodeError } from "@ubiquity-os/ethers-decode-error";
 import DBetManifest from "../contracts/DBet.json";
+import { getLocalTeamInfo } from "../utils/teamMapper";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
@@ -18,10 +19,10 @@ export default function Home() {
   const [teamA, setTeamA] = useState("");
   const [teamB, setTeamB] = useState("");
   const [matchDate, setMatchDate] = useState("");
-
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [betAmount, setBetAmount] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("1");
+  const [fetchedTeams, setFetchedTeams] = useState({});
 
   useEffect(() => {
     if (window.ethereum) {
@@ -29,19 +30,61 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (matches.length > 0) {
+      resolveMissingTeams();
+    }
+  }, [matches]);
+
+  const resolveMissingTeams = async () => {
+    const newTeamsCache = { ...fetchedTeams };
+    let updated = false;
+
+    for (const match of matches) {
+      const teamsToCheck = [match.teamA, match.teamB];
+
+      for (const teamId of teamsToCheck) {
+        if (getLocalTeamInfo(teamId)) continue;
+        if (newTeamsCache[teamId]) continue;
+
+        try {
+          const res = await fetch(`/api/team?id=${teamId}`);
+          if (res.ok) {
+            const data = await res.json();
+            newTeamsCache[teamId] = data;
+            updated = true;
+          }
+        } catch (err) {
+          console.error("Error al obtener equipo de la API interna:", err);
+        }
+      }
+    }
+
+    if (updated) {
+      setFetchedTeams(newTeamsCache);
+    }
+  };
+
+  const displayTeam = (id) => {
+    const localTeam = getLocalTeamInfo(id);
+    if (localTeam) return localTeam;
+
+    if (fetchedTeams[id]) return fetchedTeams[id];
+
+    return { name: `Equipo ${id}`, crest: null };
+  };
+
   const configureBlockchain = async () => {
     try {
       const rawProvider = await detectEthereumProvider();
 
       try {
-        // Le pedimos a MetaMask que cambie a Sepolia
         const sepoliaChainId = "0xaa36a7";
         await rawProvider.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: sepoliaChainId }],
         });
       } catch (switchError) {
-        // Si da error, detenemos la ejecución
         console.error("El usuario no cambió a Sepolia:", switchError);
         setErrorMessage("Debes cambiar a la red Sepolia para usar esta DApp.");
         return;
@@ -216,7 +259,6 @@ export default function Home() {
         ) : (
           <ul className="match-list">
             {matches.map((match) => {
-              // COMPROBACIÓN DE TIEMPO Y ESTADO
               const currentTime = Math.floor(Date.now() / 1000);
               const hasStarted = currentTime >= match.startTime;
 
@@ -231,15 +273,51 @@ export default function Home() {
                 statusClass = "status-playing";
               }
 
+              const infoA = displayTeam(match.teamA);
+              const infoB = displayTeam(match.teamB);
+
               return (
                 <li
                   key={match.id}
                   className="match-item"
                   onClick={() => setSelectedMatch(match)}
                 >
-                  <div>
-                    <strong>Partido #{match.id}:</strong> Equipo {match.teamA}{" "}
-                    vs Equipo {match.teamB}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <strong>Partido #{match.id}:</strong>
+
+                    {infoA.crest && (
+                      <img
+                        src={infoA.crest}
+                        alt={infoA.name}
+                        width="20"
+                        height="20"
+                        style={{ objectFit: "contain" }}
+                      />
+                    )}
+                    <span>{infoA.name}</span>
+
+                    <span
+                      style={{ color: "var(--text-muted)", margin: "0 4px" }}
+                    >
+                      vs
+                    </span>
+
+                    {infoB.crest && (
+                      <img
+                        src={infoB.crest}
+                        alt={infoB.name}
+                        width="20"
+                        height="20"
+                        style={{ objectFit: "contain" }}
+                      />
+                    )}
+                    <span>{infoB.name}</span>
                   </div>
                   <span className={`match-status ${statusClass}`}>
                     {statusText}
@@ -271,7 +349,9 @@ export default function Home() {
               <strong>Ganador Oficial:</strong>{" "}
               {selectedMatch.winningTeam === 3
                 ? "Empate"
-                : `Equipo ${selectedMatch.winningTeam}`}
+                : selectedMatch.winningTeam === 1
+                  ? displayTeam(selectedMatch.teamA).name
+                  : displayTeam(selectedMatch.teamB).name}
             </div>
           )}
 
@@ -286,10 +366,10 @@ export default function Home() {
                   onChange={(e) => setSelectedTeam(e.target.value)}
                 >
                   <option value="1">
-                    Victoria Local (Equipo {selectedMatch.teamA})
+                    Victoria Local ({displayTeam(selectedMatch.teamA).name})
                   </option>
                   <option value="2">
-                    Victoria Visitante (Equipo {selectedMatch.teamB})
+                    Victoria Visitante ({displayTeam(selectedMatch.teamB).name})
                   </option>
                   <option value="3">Empate</option>
                 </select>
