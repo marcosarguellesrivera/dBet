@@ -15,14 +15,16 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
   const [account, setAccount] = useState("");
   const [matches, setMatches] = useState([]);
-
+  const [fetchedTeams, setFetchedTeams] = useState({});
+  const [userBetInfo, setUserBetInfo] = useState(null);
   const [teamA, setTeamA] = useState("");
   const [teamB, setTeamB] = useState("");
   const [matchDate, setMatchDate] = useState("");
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [betAmount, setBetAmount] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState("1");
-  const [fetchedTeams, setFetchedTeams] = useState({});
+  const [selectedTeam, setSelectedTeam] = useState("1"); // 1: Local, 2: Visitante, 3: Empate
+
+  const [selectedDateFilter, setSelectedDateFilter] = useState("all");
 
   useEffect(() => {
     if (window.ethereum) {
@@ -35,6 +37,14 @@ export default function Home() {
       resolveMissingTeams();
     }
   }, [matches]);
+
+  useEffect(() => {
+    if (selectedMatch && account) {
+      fetchUserBetOnMatch();
+    } else {
+      setUserBetInfo(null);
+    }
+  }, [selectedMatch, account]);
 
   const resolveMissingTeams = async () => {
     const newTeamsCache = { ...fetchedTeams };
@@ -55,7 +65,7 @@ export default function Home() {
             updated = true;
           }
         } catch (err) {
-          console.error("Error al obtener equipo de la API interna:", err);
+          console.error("Error al obtener equipo de la API:", err);
         }
       }
     }
@@ -68,16 +78,17 @@ export default function Home() {
   const displayTeam = (id) => {
     const localTeam = getLocalTeamInfo(id);
     if (localTeam) return localTeam;
-
     if (fetchedTeams[id]) return fetchedTeams[id];
-
     return { name: `Equipo ${id}`, crest: null };
+  };
+
+  const handleCrestError = (e) => {
+    e.target.style.display = "none";
   };
 
   const configureBlockchain = async () => {
     try {
       const rawProvider = await detectEthereumProvider();
-
       try {
         const sepoliaChainId = "0xaa36a7";
         await rawProvider.request({
@@ -110,10 +121,28 @@ export default function Home() {
     }
   };
 
+  const fetchUserBetOnMatch = async () => {
+    if (!contractRef.current || !selectedMatch || !account) return;
+
+    try {
+      const betData = await contractRef.current.userBets(
+        selectedMatch.id,
+        account,
+      );
+
+      setUserBetInfo({
+        amount: ethers.utils.formatEther(betData.amount),
+        selectedTeam: Number(betData.selectedTeam),
+        hasClaimed: betData.hasClaimed,
+      });
+    } catch (error) {
+      console.error("Error al obtener la apuesta del usuario:", error);
+    }
+  };
+
   const fetchMatches = async () => {
     try {
       if (!contractRef.current) return;
-
       const counter = await contractRef.current.matchCounter();
       const totalMatches = Number(counter);
 
@@ -140,14 +169,13 @@ export default function Home() {
     try {
       setErrorMessage("");
       const startTimeUnix = Math.floor(new Date(matchDate).getTime() / 1000);
-
       const tx = await contractRef.current.createMatch(
+        0,
         parseInt(teamA),
         parseInt(teamB),
         startTimeUnix,
       );
       await tx.wait();
-
       setTeamA("");
       setTeamB("");
       setMatchDate("");
@@ -163,23 +191,18 @@ export default function Home() {
     try {
       setErrorMessage("");
       const parsedAmount = ethers.utils.parseEther(betAmount.toString());
-
       const tx = await contractRef.current.bet(
         selectedMatch.id,
         parseInt(selectedTeam),
-        {
-          value: parsedAmount,
-        },
+        { value: parsedAmount },
       );
       await tx.wait();
-
       setBetAmount("");
       alert("¡Apuesta realizada con éxito!");
+      await fetchUserBetOnMatch();
     } catch (error) {
       if (error?.message?.includes("insufficient funds")) {
-        setErrorMessage(
-          "Saldo insuficiente en tu wallet para hacer esta apuesta o pagar el gas.",
-        );
+        setErrorMessage("Saldo insuficiente en tu wallet.");
         return;
       }
       let decoded = decodeError(error);
@@ -199,9 +222,35 @@ export default function Home() {
       setErrorMessage(decoded.error || "Error al reclamar las ganancias");
     }
   };
+
+  const uniqueDates = [
+    ...new Set(
+      matches.map((match) => {
+        const dateObj = new Date(match.startTime * 1000);
+        return dateObj.toLocaleDateString();
+      }),
+    ),
+  ].sort((a, b) => {
+    const [dayA, monthA, yearA] = a.split("/");
+    const [dayB, monthB, yearB] = b.split("/");
+    return (
+      new Date(`${yearA}-${monthA}-${dayA}`) -
+      new Date(`${yearB}-${monthB}-${dayB}`)
+    );
+  });
+
+  const filteredMatches =
+    selectedDateFilter === "all"
+      ? matches
+      : matches.filter((match) => {
+          const matchDateStr = new Date(
+            match.startTime * 1000,
+          ).toLocaleDateString();
+          return matchDateStr === selectedDateFilter;
+        });
+
   return (
     <div className="container">
-      {/* HEADER */}
       <div className="header">
         <h1 className="title">⚽ DBet</h1>
         {!account ? (
@@ -214,20 +263,74 @@ export default function Home() {
       </div>
 
       {errorMessage && (
-        <div className="error-message">
-          <span>{errorMessage}</span>
-          <button
-            className="close-error-btn"
-            onClick={() => setErrorMessage("")}
-            title="Cerrar mensaje"
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            backgroundColor:
+              "rgba(0, 0, 0, 0.6)" /* Fondo oscuro semitransparente */,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999 /* Asegura que esté por encima de todo */,
+            backdropFilter: "blur(3px)" /* Efecto desenfoque moderno */,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "var(--bg-secondary, #1e1e2f)", // Usa tu color de fondo o uno oscuro por defecto
+              border: "1px solid #ef4444", // Borde rojo
+              borderRadius: "12px",
+              padding: "25px",
+              maxWidth: "400px",
+              width: "90%",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+              textAlign: "center",
+              animation: "fadeIn 0.2s ease-out",
+            }}
           >
-            &times;
-          </button>
+            <div style={{ fontSize: "2.5rem", marginBottom: "10px" }}>⚠️</div>
+            <h3
+              style={{ color: "#ef4444", marginTop: 0, marginBottom: "15px" }}
+            >
+              Algo ha fallado
+            </h3>
+
+            <p
+              style={{
+                color: "var(--text-color, #fff)",
+                lineHeight: "1.5",
+                marginBottom: "20px",
+              }}
+            >
+              {errorMessage}
+            </p>
+
+            <button
+              onClick={() => setErrorMessage("")}
+              style={{
+                padding: "12px 20px",
+                backgroundColor: "#ef4444",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: "pointer",
+                fontWeight: "bold",
+                width: "100%",
+                fontSize: "1rem",
+              }}
+            >
+              Entendido
+            </button>
+          </div>
         </div>
       )}
 
       <div className="card">
-        <h2>🛠️ Crear Nuevo Partido (Admin)</h2>
+        <h2>Crear Nuevo Partido</h2>
         <div className="form-group">
           <input
             type="number"
@@ -251,77 +354,203 @@ export default function Home() {
       </div>
 
       <div className="card">
-        <h2>🏆 Partidos Disponibles</h2>
-        {matches.length === 0 ? (
-          <p style={{ color: "var(--text-muted)" }}>
-            No hay partidos activos en este momento.
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <h2 style={{ margin: 0 }}>Cartelera de Partidos</h2>
+        </div>
+
+        {matches.length > 0 && (
+          <div
+            className="date-nav-bar"
+            style={{
+              display: "flex",
+              gap: "10px",
+              overflowX: "auto",
+              paddingBottom: "10px",
+              marginBottom: "15px",
+              borderBottom: "1px solid var(--border-color)",
+            }}
+          >
+            <button
+              className={`nav-btn ${selectedDateFilter === "all" ? "active" : ""}`}
+              onClick={() => setSelectedDateFilter("all")}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "20px",
+                border: "none",
+                cursor: "pointer",
+                backgroundColor:
+                  selectedDateFilter === "all"
+                    ? "var(--primary)"
+                    : "var(--bg-secondary)",
+                color:
+                  selectedDateFilter === "all" ? "#fff" : "var(--text-color)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Todos
+            </button>
+            {uniqueDates.map((dateStr, index) => (
+              <button
+                key={index}
+                className={`nav-btn ${selectedDateFilter === dateStr ? "active" : ""}`}
+                onClick={() => setSelectedDateFilter(dateStr)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "20px",
+                  border: "none",
+                  cursor: "pointer",
+                  backgroundColor:
+                    selectedDateFilter === dateStr
+                      ? "var(--primary)"
+                      : "var(--bg-secondary)",
+                  color:
+                    selectedDateFilter === dateStr
+                      ? "#fff"
+                      : "var(--text-color)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {dateStr}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filteredMatches.length === 0 ? (
+          <p
+            style={{
+              color: "var(--text-muted)",
+              textAlign: "center",
+              padding: "20px",
+            }}
+          >
+            No hay partidos programados para este día.
           </p>
         ) : (
           <ul className="match-list">
-            {matches.map((match) => {
+            {filteredMatches.map((match) => {
               const currentTime = Math.floor(Date.now() / 1000);
               const hasStarted = currentTime >= match.startTime;
 
-              let statusText = "Abierto para apuestas";
+              let statusText = "Abierto";
               let statusClass = "status-open";
 
               if (match.isResolved) {
                 statusText = "Finalizado";
                 statusClass = "status-resolved";
               } else if (hasStarted) {
-                statusText = "En juego (Cerrado)";
+                statusText = "En juego";
                 statusClass = "status-playing";
               }
 
               const infoA = displayTeam(match.teamA);
               const infoB = displayTeam(match.teamB);
+              const timeString = new Date(
+                match.startTime * 1000,
+              ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
               return (
                 <li
                   key={match.id}
                   className="match-item"
                   onClick={() => setSelectedMatch(match)}
+                  style={{ cursor: "pointer" }}
                 >
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      flexDirection: "column",
                       gap: "8px",
+                      width: "100%",
                     }}
                   >
-                    <strong>Partido #{match.id}:</strong>
-
-                    {infoA.crest && (
-                      <img
-                        src={infoA.crest}
-                        alt={infoA.name}
-                        width="20"
-                        height="20"
-                        style={{ objectFit: "contain" }}
-                      />
-                    )}
-                    <span>{infoA.name}</span>
-
-                    <span
-                      style={{ color: "var(--text-muted)", margin: "0 4px" }}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.85rem",
+                        color: "var(--text-muted)",
+                      }}
                     >
-                      vs
-                    </span>
+                      <span>
+                        #{match.id} | 🕒 {timeString}
+                      </span>
+                      <span className={`match-status ${statusClass}`}>
+                        {statusText}
+                      </span>
+                    </div>
 
-                    {infoB.crest && (
-                      <img
-                        src={infoB.crest}
-                        alt={infoB.name}
-                        width="20"
-                        height="20"
-                        style={{ objectFit: "contain" }}
-                      />
-                    )}
-                    <span>{infoB.name}</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "15px",
+                        padding: "10px 0",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          flex: 1,
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        <span style={{ fontWeight: "bold" }}>{infoA.name}</span>
+                        {infoA.crest && (
+                          <img
+                            src={infoA.crest}
+                            alt={infoA.name}
+                            width="28"
+                            height="28"
+                            style={{ objectFit: "contain" }}
+                            onError={handleCrestError}
+                          />
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          color: "var(--text-muted)",
+                          fontWeight: "bold",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        VS
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          flex: 1,
+                          justifyContent: "flex-start",
+                        }}
+                      >
+                        {infoB.crest && (
+                          <img
+                            src={infoB.crest}
+                            alt={infoB.name}
+                            width="28"
+                            height="28"
+                            style={{ objectFit: "contain" }}
+                            onError={handleCrestError}
+                          />
+                        )}
+                        <span style={{ fontWeight: "bold" }}>{infoB.name}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className={`match-status ${statusClass}`}>
-                    {statusText}
-                  </span>
                 </li>
               );
             })}
@@ -330,63 +559,301 @@ export default function Home() {
       </div>
 
       {selectedMatch && (
-        <div className="card" style={{ border: "1px solid var(--primary)" }}>
-          <h2>Detalles del Partido #{selectedMatch.id}</h2>
-          <p style={{ color: "var(--text-muted)", marginBottom: "20px" }}>
-            <strong>Inicio:</strong>{" "}
-            {new Date(selectedMatch.startTime * 1000).toLocaleString()}
+        <div
+          className="card"
+          style={{ border: "2px solid var(--primary)", position: "relative" }}
+        >
+          <button
+            onClick={() => setSelectedMatch(null)}
+            style={{
+              position: "absolute",
+              top: "15px",
+              right: "15px",
+              background: "none",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: "1.2rem",
+            }}
+          >
+            ✕
+          </button>
+
+          <h2 style={{ marginTop: 0, marginBottom: "5px" }}>
+            Boleta de Apuesta
+          </h2>
+          <p
+            style={{
+              color: "var(--text-muted)",
+              marginBottom: "25px",
+              fontSize: "0.9rem",
+            }}
+          >
+            {displayTeam(selectedMatch.teamA).name} vs{" "}
+            {displayTeam(selectedMatch.teamB).name}
           </p>
+
+          {userBetInfo && Number(userBetInfo.amount) > 0 && (
+            <div
+              style={{
+                backgroundColor: "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgb(16, 185, 129)",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "20px",
+                fontSize: "0.95rem",
+              }}
+            >
+              <span
+                style={{
+                  display: "block",
+                  fontWeight: "bold",
+                  color: "rgb(16, 185, 129)",
+                  marginBottom: "4px",
+                }}
+              >
+                Tu apuesta registrada:
+              </span>
+              Has apostado{" "}
+              <strong style={{ fontSize: "1.05rem" }}>
+                {userBetInfo.amount} ETH
+              </strong>{" "}
+              al pronóstico de{" "}
+              <strong style={{ color: "var(--primary)" }}>
+                {userBetInfo.selectedTeam === 1 &&
+                  displayTeam(selectedMatch.teamA).name}
+                {userBetInfo.selectedTeam === 2 &&
+                  displayTeam(selectedMatch.teamB).name}
+                {userBetInfo.selectedTeam === 3 && "Empate (X)"}
+              </strong>
+              .
+              {userBetInfo.hasClaimed && (
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: "5px",
+                    color: "var(--text-muted)",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  El premio de esta apuesta ya ha sido retirado.
+                </span>
+              )}
+            </div>
+          )}
 
           {selectedMatch.isResolved && selectedMatch.winningTeam !== 0 && (
             <div
               style={{
                 backgroundColor: "rgba(59, 130, 246, 0.1)",
-                padding: "10px",
+                padding: "15px",
                 borderRadius: "8px",
                 marginBottom: "20px",
+                textAlign: "center",
               }}
             >
-              <strong>Ganador Oficial:</strong>{" "}
-              {selectedMatch.winningTeam === 3
-                ? "Empate"
-                : selectedMatch.winningTeam === 1
-                  ? displayTeam(selectedMatch.teamA).name
-                  : displayTeam(selectedMatch.teamB).name}
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "0.9rem",
+                  color: "var(--text-muted)",
+                  marginBottom: "5px",
+                }}
+              >
+                Resultado Oficial:
+              </span>
+              <strong style={{ fontSize: "1.1rem", color: "var(--primary)" }}>
+                {selectedMatch.winningTeam === 3
+                  ? "Empate"
+                  : selectedMatch.winningTeam === 1
+                    ? displayTeam(selectedMatch.teamA).name
+                    : displayTeam(selectedMatch.teamB).name}
+              </strong>
             </div>
           )}
 
           {!selectedMatch.isResolved ? (
             <div>
-              <h3 style={{ marginTop: 0, fontSize: "16px" }}>
-                Hacer una apuesta
-              </h3>
-              <div className="form-group">
-                <select
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
+              <div style={{ marginBottom: "20px" }}>
+                <p style={{ fontWeight: "bold", marginBottom: "10px" }}>
+                  1. Selecciona tu pronóstico:
+                </p>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: "10px",
+                  }}
                 >
-                  <option value="1">
-                    Victoria Local ({displayTeam(selectedMatch.teamA).name})
-                  </option>
-                  <option value="2">
-                    Victoria Visitante ({displayTeam(selectedMatch.teamB).name})
-                  </option>
-                  <option value="3">Empate</option>
-                </select>
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "15px 10px",
+                      border:
+                        selectedTeam === "1"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border-color)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        selectedTeam === "1"
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "transparent",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="betSelection"
+                      value="1"
+                      checked={selectedTeam === "1"}
+                      onChange={(e) => setSelectedTeam(e.target.value)}
+                      style={{ display: "none" }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-muted)",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Local
+                    </span>
+                    <span style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {displayTeam(selectedMatch.teamA).name}
+                    </span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "15px 10px",
+                      border:
+                        selectedTeam === "3"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border-color)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        selectedTeam === "3"
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "transparent",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="betSelection"
+                      value="3"
+                      checked={selectedTeam === "3"}
+                      onChange={(e) => setSelectedTeam(e.target.value)}
+                      style={{ display: "none" }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-muted)",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Empate
+                    </span>
+                    <span style={{ fontWeight: "bold", textAlign: "center" }}>
+                      X
+                    </span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      padding: "15px 10px",
+                      border:
+                        selectedTeam === "2"
+                          ? "2px solid var(--primary)"
+                          : "1px solid var(--border-color)",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backgroundColor:
+                        selectedTeam === "2"
+                          ? "rgba(59, 130, 246, 0.1)"
+                          : "transparent",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="betSelection"
+                      value="2"
+                      checked={selectedTeam === "2"}
+                      onChange={(e) => setSelectedTeam(e.target.value)}
+                      style={{ display: "none" }}
+                    />
+                    <span
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--text-muted)",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Visitante
+                    </span>
+                    <span style={{ fontWeight: "bold", textAlign: "center" }}>
+                      {displayTeam(selectedMatch.teamB).name}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "20px" }}>
+                <p style={{ fontWeight: "bold", marginBottom: "10px" }}>
+                  2. Importe a apostar (ETH):
+                </p>
                 <input
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   min="0.01"
-                  placeholder="ETH a apostar"
+                  placeholder="Ej: 0.05"
                   value={betAmount}
                   onChange={(e) => setBetAmount(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-color)",
+                    backgroundColor: "var(--bg-secondary)",
+                    color: "var(--text-color)",
+                  }}
                 />
-                <button onClick={placeBet}>Enviar Apuesta</button>
               </div>
+
+              <button
+                onClick={placeBet}
+                disabled={!betAmount || Number(betAmount) <= 0}
+                style={{
+                  width: "100%",
+                  padding: "15px",
+                  fontSize: "1.1rem",
+                  opacity: !betAmount || Number(betAmount) <= 0 ? 0.5 : 1,
+                }}
+              >
+                Confirmar Apuesta
+              </button>
             </div>
           ) : (
-            <div>
-              <button onClick={claimReward}>🎁 Reclamar Premio</button>
+            <div style={{ textAlign: "center" }}>
+              <p style={{ marginBottom: "20px" }}>
+                El partido ha finalizado. Comprueba si has ganado.
+              </p>
+              <button onClick={claimReward} style={{ width: "100%" }}>
+                Reclamar Premio
+              </button>
             </div>
           )}
         </div>

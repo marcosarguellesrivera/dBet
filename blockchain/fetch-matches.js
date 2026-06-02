@@ -21,13 +21,31 @@ if (!matches || matches.length === 0) {
   throw Error("No matches scheduled");
 }
 
-const match = matches[0];
+const matchesToProcess = matches.slice(0, 10);
+const packedMatches = [];
 
-const teamA = match.homeTeam.id;
-const teamB = match.awayTeam.id;
-const startTime = Math.floor(new Date(match.utcDate).getTime() / 1000);
+for (const match of matchesToProcess) {
+  const apiMatchId = match.id;
+  const teamA = match.homeTeam.id;
+  const teamB = match.awayTeam.id;
+  const startTime = Math.floor(new Date(match.utcDate).getTime() / 1000);
 
-let packed =
-  (BigInt(startTime) << 32n) | (BigInt(teamA) << 16n) | BigInt(teamB);
+  let packed =
+    (BigInt(startTime) << 64n) |
+    (BigInt(apiMatchId) << 32n) |
+    (BigInt(teamA) << 16n) |
+    BigInt(teamB);
 
-return Functions.encodeUint256(packed);
+  packedMatches.push(packed);
+}
+
+let abiEncoded =
+  "0000000000000000000000000000000000000000000000000000000000000020";
+
+abiEncoded += packedMatches.length.toString(16).padStart(64, "0");
+
+for (const pack of packedMatches) {
+  abiEncoded += pack.toString(16).padStart(64, "0");
+}
+
+return Buffer.from(abiEncoded, "hex");

@@ -17,9 +17,21 @@ async function main() {
 
   sourceCode = sourceCode.replace("__API_KEY__", apiKey);
 
-  console.log("Uploading source code to the contract " + contractAddress);
+  console.log(
+    "Uploading fetch-matches source code to the contract " + contractAddress,
+  );
 
-  const tx = await dBet.setFetchMatchesSourceCode(sourceCode);
+  let tx = await dBet.setFetchMatchesSourceCode(sourceCode);
+  await tx.wait();
+
+  sourceCode = fs.readFileSync("./fetch-results.js", "utf8");
+
+  sourceCode = sourceCode.replace("__API_KEY__", apiKey);
+
+  console.log(
+    "Uploading fetch-result source code to the contract " + contractAddress,
+  );
+  tx = await dBet.setFetchResultSourceCode(sourceCode);
   await tx.wait();
 
   console.log("Source code uploaded");
