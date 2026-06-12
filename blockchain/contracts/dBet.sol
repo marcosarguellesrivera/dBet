@@ -26,21 +26,23 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     uint256 public constant CLAIM_DEADLINE = 7 days;
     uint256 public matchCounter;
     uint256 public nextMatchToResolve = 1;
+    bool public isFetchingMatches;
+    uint256 public currentOffset;
 
     enum RequestType { ResolveMatch, CreateMatch }
     mapping(bytes32 => RequestType) public requestTypes;
 
     struct MatchData {
-        uint256 apiMatchId;
-        uint16 teamA;
-        uint16 teamB;
-        bool isResolved;
-        uint16 winningTeam; 
-        bool betsOpen;
         uint256 startTime;
         uint256 endTime; 
-        bool swept;
         uint256 totalClaimed;
+        uint32 apiMatchId;
+        uint16 teamA;
+        uint16 teamB;
+        uint16 winningTeam; 
+        bool isResolved;
+        bool betsOpen;
+        bool swept;
         mapping(uint256 => uint256) pools;
     }
 
@@ -110,6 +112,10 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
             }
         }
 
+        if (isFetchingMatches) {
+            return (true, abi.encode(uint8(2), uint256(0)));
+        }
+
         if ((block.timestamp - lastTimeStamp) > updateInterval) {
             return (true, abi.encode(uint8(0), uint256(0)));
         }
@@ -125,7 +131,7 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
 
         if (actionType == 1) {
             MatchData storage pendingMatch = matches[matchIdToResolve];
-            require(!pendingMatch.isResolved, "Match already resolved");
+            require(!pendingMatch.isResolved, "Partido ya resuelto");
             
             FunctionsRequest.Request memory req;
             req.initializeRequestForInlineJavaScript(fetchResultSourceCode);
@@ -139,14 +145,20 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
             requestTypes[requestId] = RequestType.ResolveMatch;
             
             emit MatchResultRequested(requestId, matchIdToResolve);
-
-        } else if (actionType == 0) {
-            require((block.timestamp - lastTimeStamp) > updateInterval, "Not time yet");
-            lastTimeStamp = block.timestamp;
+        } else if (actionType == 0 || actionType == 2) {
+            if (actionType == 0) {
+                lastTimeStamp = block.timestamp;
+                isFetchingMatches = true;
+                currentOffset = 0;
+            }
 
             FunctionsRequest.Request memory req;
             req.initializeRequestForInlineJavaScript(fetchMatchesSourceCode);
             
+            string[] memory args = new string[](1);
+            args[0] = Strings.toString(currentOffset);
+            req.setArgs(args);
+
             bytes32 requestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
             requestTypes[requestId] = RequestType.CreateMatch;
             
@@ -166,7 +178,7 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     /// @notice Internal logic to create a match and prevent duplicates
     /// @dev Uses keccak256 hash to verify uniqueness based on teams and start time
     function _createMatchInternal(uint32 _apiMatchId, uint16 _teamA, uint16 _teamB, uint256 _startTime) internal {
-        require(_startTime > block.timestamp, "Match start time must be in the future");
+        require(_startTime > block.timestamp, "El inicio del partido debe ser futuro");
 
         bytes32 matchHash = keccak256(abi.encodePacked(_teamA, _teamB, _startTime));
 
@@ -202,12 +214,12 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
 
         if (reqType == RequestType.ResolveMatch) {
             uint256 matchId = requestToMatchId[requestId];
-            require(!matches[matchId].isResolved, "Match already resolved");
+            require(!matches[matchId].isResolved, "El partido ya se ha resuelto");
 
             uint256 winningTeamUint = abi.decode(response, (uint256));
             uint16 winningTeam = uint16(winningTeamUint);
 
-            require(winningTeam >= 1 && winningTeam <= 3, "Invalid winner selection");
+            require(winningTeam >= 1 && winningTeam <= 3, "El ganador no es valido");
 
             matches[matchId].isResolved = true;
             matches[matchId].winningTeam = winningTeam;
@@ -230,6 +242,13 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
                 
                 _createMatchInternal(apiMatchId, teamA, teamB, startTime);
             }
+
+            if (packedMatches.length == 3) {
+                currentOffset += 3;
+            } else {
+                isFetchingMatches = false;
+                currentOffset = 0;
+            }
         }
     }
 
@@ -237,11 +256,11 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     /// @param _matchId The internal ID of the match
     /// @param _team The selected outcome (1: Home, 2: Away, 3: Draw)
     function bet(uint256 _matchId, uint16 _team) external payable {
-        require(block.timestamp < matches[_matchId].startTime, "Match has started, betting is closed");
-        require(msg.value >= MINIMUM_BET, "Bet amount too low");
-        require(!matches[_matchId].isResolved, "Match already resolved");
-        require(_team >= 1 && _team <= 3, "Invalid team selection");
-        require(userBets[_matchId][msg.sender].amount == 0, "Bet already placed"); 
+        require(block.timestamp < matches[_matchId].startTime, "El partido ha comenzado, no se aceptan apuestas");
+        require(msg.value >= MINIMUM_BET, "Cantidad apostada muy baja");
+        require(!matches[_matchId].isResolved, "El partido ya se ha resuelto");
+        require(_team >= 1 && _team <= 3, "El ganador no es valido");
+        require(userBets[_matchId][msg.sender].amount == 0, "Ya se ha apostado a este partido"); 
         
         matches[_matchId].pools[_team] += msg.value;
 
@@ -260,11 +279,11 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
         MatchData storage currentMatch = matches[_matchId];
         BetData storage userBet = userBets[_matchId][msg.sender];
 
-        require(currentMatch.isResolved, "Match is not resolved yet");
-        require(userBet.amount > 0, "No bet placed");
-        require(!userBet.hasClaimed, "Reward already claimed");
-        require(userBet.selectedTeam == currentMatch.winningTeam, "You did not win");
-        require(block.timestamp <= currentMatch.endTime + CLAIM_DEADLINE, "Claim period ended");
+        require(currentMatch.isResolved, "Partido sin resolver");
+        require(userBet.amount > 0, "No se ha apostado a este partido");
+        require(!userBet.hasClaimed, "Recompensa ya reclamada");
+        require(userBet.selectedTeam == currentMatch.winningTeam, "No has obtenido ninguna recompensa");
+        require(block.timestamp <= currentMatch.endTime + CLAIM_DEADLINE, "Ya no se pueden reclamar las recompensas");
 
         userBet.hasClaimed = true;
 
@@ -284,19 +303,19 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     function sweepUnclaimedFunds(uint256 _matchId) external onlyOwner {
         MatchData storage currentMatch = matches[_matchId];
 
-        require(currentMatch.isResolved, "Match is not resolved yet");
-        require(!currentMatch.swept, "Funds already swept for this match");
-        require(block.timestamp > currentMatch.endTime + CLAIM_DEADLINE, "Claim deadline not reached yet");
+        require(currentMatch.isResolved, "El partido no se ha resuelto");
+        require(!currentMatch.swept, "Fondos ya barridos");
+        require(block.timestamp > currentMatch.endTime + CLAIM_DEADLINE, "El periodo de barrido no ha comenzado");
 
         uint256 totalMatchPool = currentMatch.pools[1] + currentMatch.pools[2] + currentMatch.pools[3];
         uint256 amount = totalMatchPool - currentMatch.totalClaimed;
         
-        require(amount > 0, "No funds left to sweep");
+        require(amount > 0, "No hay fondos que barrer");
 
         currentMatch.swept = true;
 
         (bool success, ) = payable(owner()).call{value: amount}("");
-        require(success, "Sweep transfer failed");
+        require(success, "Fallo en el barrido de fondos");
 
         emit FundsSwept(_matchId, amount);
     }

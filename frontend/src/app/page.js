@@ -198,7 +198,6 @@ export default function Home() {
       );
       await tx.wait();
       setBetAmount("");
-      alert("¡Apuesta realizada con éxito!");
       await fetchUserBetOnMatch();
     } catch (error) {
       if (error?.message?.includes("insufficient funds")) {
@@ -270,19 +269,18 @@ export default function Home() {
             left: 0,
             width: "100vw",
             height: "100vh",
-            backgroundColor:
-              "rgba(0, 0, 0, 0.6)" /* Fondo oscuro semitransparente */,
+            backgroundColor: "rgba(0, 0, 0, 0.6)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 9999 /* Asegura que esté por encima de todo */,
-            backdropFilter: "blur(3px)" /* Efecto desenfoque moderno */,
+            zIndex: 9999,
+            backdropFilter: "blur(3px)",
           }}
         >
           <div
             style={{
-              backgroundColor: "var(--bg-secondary, #1e1e2f)", // Usa tu color de fondo o uno oscuro por defecto
-              border: "1px solid #ef4444", // Borde rojo
+              backgroundColor: "var(--bg-secondary, #1e1e2f)",
+              border: "1px solid #ef4444",
               borderRadius: "12px",
               padding: "25px",
               maxWidth: "400px",

@@ -16,6 +16,11 @@ const apiRequest = Functions.makeHttpRequest({
 const apiResponse = await apiRequest;
 
 if (apiResponse.error) {
+  console.error(
+    "Detalles del rechazo de la API:",
+    JSON.stringify(apiResponse.response),
+  );
+
   throw Error("Failiure trying to conect to the API");
 }
 
