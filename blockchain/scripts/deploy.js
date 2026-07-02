@@ -30,12 +30,7 @@ async function main() {
   const interval = 60;
   const subId = 6496;
 
-  const dBet = await hre.ethers.deployContract("DBet", [
-    router,
-    donId,
-    subId,
-    interval,
-  ]);
+  const dBet = await hre.ethers.deployContract("DBet");
 
   await dBet.waitForDeployment();
   const address = await dBet.getAddress();
@@ -46,6 +41,11 @@ async function main() {
     address,
     path.join(__dirname, "../../frontend/.env.local"),
     "NEXT_PUBLIC_CONTRACT_ADDRESS",
+  );
+  updateEnvFile(
+    address,
+    path.join(__dirname, "../../chainlink-cre/.env"),
+    "CONTRACT_ADDRESS",
   );
 }
 

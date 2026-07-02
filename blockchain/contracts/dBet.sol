@@ -1,36 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
-import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
 import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
-import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/AutomationCompatible.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title DBet - Decentralized Sports Betting Platform
 /// @notice This contract manages sports bets, match creation via Chainlink Automation, and result fetching via Chainlink Functions.
-contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface {
+contract DBet is ConfirmedOwner {
 
-    using FunctionsRequest for FunctionsRequest.Request;
-    bytes32 public donId;
-    uint64 public subscriptionId;
-    uint256 public updateInterval;
+    address public keystoneForwarder;
 
-    uint32 public gasLimit = 300000;
-    
-    uint256 public lastTimeStamp;
-    string public fetchMatchesSourceCode;
-    string public fetchResultSourceCode;
+    modifier onlyForwarder() {
+        require(msg.sender == keystoneForwarder, "Acceso denegado: Solo el Forwarder de CRE");
+        _;
+    }
+
+    function setKeystoneForwarder(address _forwarder) external onlyOwner {
+        keystoneForwarder = _forwarder;
+    }
 
     uint256 public constant MINIMUM_BET = 0.01 ether;
     uint256 public constant CLAIM_DEADLINE = 7 days;
     uint256 public matchCounter;
-    uint256 public nextMatchToResolve = 1;
-    bool public isFetchingMatches;
-    uint256 public currentOffset;
-
-    enum RequestType { ResolveMatch, CreateMatch }
-    mapping(bytes32 => RequestType) public requestTypes;
 
     struct MatchData {
         uint256 startTime;
@@ -55,115 +45,41 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
     mapping(uint256 => MatchData) public matches;
     mapping(bytes32 => bool) public matchExists;
     mapping(uint256 => mapping(address => BetData)) public userBets;
-    mapping(bytes32 => uint256) public requestToMatchId;
 
     event MatchCreated(uint256 indexed matchId, uint16 teamA, uint16 teamB, uint256 startTime);
     event BetPlaced(uint256 indexed matchId, address indexed user, uint16 team, uint256 amount);
     event MatchResolved(uint256 indexed matchId, uint16 winningTeam);
     event RewardClaimed(uint256 indexed matchId, address indexed user, uint256 rewardAmount);
     event FundsSwept(uint256 indexed matchId, uint256 amount);
-    event MatchResultRequested(bytes32 indexed requestId, uint256 indexed matchId);
-    event MatchesCreationRequested(bytes32 indexed requestId);
-    event ResponseError(bytes32 indexed requestId, bytes err);
 
-    /// @notice Initializes the contract with Chainlink parameters
-    /// @param _router The Chainlink Functions Router address
-    /// @param _donId The Decentralized Oracle Network ID
-    /// @param _subscriptionId The billing subscription ID for Chainlink Functions
-    /// @param _updateInterval The time interval (in seconds) for Chainlink Automation
-    constructor(
-        address _router,
-        bytes32 _donId,
-        uint64 _subscriptionId,
-        uint256 _updateInterval
-    ) FunctionsClient(_router) ConfirmedOwner(msg.sender) {
-        donId = _donId;
-        subscriptionId = _subscriptionId;
-        updateInterval = _updateInterval;
-        lastTimeStamp = block.timestamp;
-    }
+    constructor() ConfirmedOwner(msg.sender) {}
 
-    /// @notice Updates the JavaScript source code used to create matches
-    /// @param _sourceCode The new JavaScript string
-    function setFetchMatchesSourceCode(string memory _sourceCode) external onlyOwner {
-        fetchMatchesSourceCode = _sourceCode;
-    }
+    /// @notice Receives the packed matches from the CRE's workflow
+    function receiveMatches(bytes calldata payload) external onlyForwarder {
+        uint256[] memory packedMatches = abi.decode(payload, (uint256[]));
 
-    /// @notice Updates the JavaScript source code used to fill match results
-    /// @param _sourceCode The new JavaScript string
-    function setFetchResultSourceCode(string memory _sourceCode) external onlyOwner {
-        fetchResultSourceCode = _sourceCode;
-    }
+        for(uint i = 0; i < packedMatches.length; i++) {
+            uint256 packed = packedMatches[i];
 
-    /// @notice Updates the time interval for automation
-    /// @param _interval New interval in seconds
-    function setUpdateInterval(uint256 _interval) external onlyOwner {
-        updateInterval = _interval;
-    }
-
-    /// @notice Used by Chainlink Automation to check if upkeep is needed
-    /// @param - Ignored calldata
-    /// @return upkeepNeeded Boolean indicating if it's time to run performUpkeep
-    /// @return - Empty bytes
-    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory) {
-        for (uint256 i = nextMatchToResolve; i <= matchCounter; i++) {
-            if (!matches[i].isResolved && block.timestamp > (matches[i].startTime + 2 hours)) {
-                return (true, abi.encode(uint8(1), i)); 
-            }
+            uint16 teamB = uint16(packed);
+            uint16 teamA = uint16(packed >> 16);
+            uint32 apiMatchId = uint32(packed >> 32);
+            uint256 startTime = uint256(uint64(packed >> 64));
+            
+            _createMatchInternal(apiMatchId, teamA, teamB, startTime);
         }
-
-        if (isFetchingMatches) {
-            return (true, abi.encode(uint8(2), uint256(0)));
-        }
-
-        if ((block.timestamp - lastTimeStamp) > updateInterval) {
-            return (true, abi.encode(uint8(0), uint256(0)));
-        }
-
-        return (false, "");
     }
 
-    /// @notice Executed by Chainlink Automation when checkUpkeep returns true
-    /// @dev Sends a request to the Oracle to fetch the latest matches
-    /// @param performData Data needed to perform the request
-    function performUpkeep(bytes calldata performData) external override {
-        (uint8 actionType, uint256 matchIdToResolve) = abi.decode(performData, (uint8, uint256));
+    /// @notice Receives the official result of a match from the CRE's workflow
+    function resolveMatch(uint256 matchId, uint16 winningTeam) external onlyForwarder {
+        require(!matches[matchId].isResolved, "El partido ya se ha resuelto");
+        require(winningTeam >= 1 && winningTeam <= 3, "El ganador no es valido");
 
-        if (actionType == 1) {
-            MatchData storage pendingMatch = matches[matchIdToResolve];
-            require(!pendingMatch.isResolved, "Partido ya resuelto");
-            
-            FunctionsRequest.Request memory req;
-            req.initializeRequestForInlineJavaScript(fetchResultSourceCode);
-            
-            string[] memory args = new string[](1);
-            args[0] = Strings.toString(pendingMatch.apiMatchId); 
-            req.setArgs(args);
-
-            bytes32 requestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
-            requestToMatchId[requestId] = matchIdToResolve;
-            requestTypes[requestId] = RequestType.ResolveMatch;
-            
-            emit MatchResultRequested(requestId, matchIdToResolve);
-        } else if (actionType == 0 || actionType == 2) {
-            if (actionType == 0) {
-                lastTimeStamp = block.timestamp;
-                isFetchingMatches = true;
-                currentOffset = 0;
-            }
-
-            FunctionsRequest.Request memory req;
-            req.initializeRequestForInlineJavaScript(fetchMatchesSourceCode);
-            
-            string[] memory args = new string[](1);
-            args[0] = Strings.toString(currentOffset);
-            req.setArgs(args);
-
-            bytes32 requestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
-            requestTypes[requestId] = RequestType.CreateMatch;
-            
-            emit MatchesCreationRequested(requestId);
-        }
+        matches[matchId].isResolved = true;
+        matches[matchId].winningTeam = winningTeam;
+        matches[matchId].endTime = block.timestamp;
+        
+        emit MatchResolved(matchId, winningTeam);
     }
 
     /// @notice Allows the owner to manually create a match bypassing the oracle
@@ -197,59 +113,6 @@ contract DBet is FunctionsClient, ConfirmedOwner, AutomationCompatibleInterface 
         newMatch.startTime = _startTime;
 
         emit MatchCreated(matchCounter, _teamA, _teamB, _startTime);
-    }
-
-    /// @notice Callback function invoked by the Chainlink Router to return the API data
-    /// @dev Handles both match creation (array of packed bits) and match resolution
-    /// @param requestId The ID of the request being fulfilled
-    /// @param response The bytes data returned by the Oracle script
-    /// @param err Any error messages returned by the Oracle
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
-        if (err.length > 0) {
-            emit ResponseError(requestId, err);
-            return;
-        }
-
-        RequestType reqType = requestTypes[requestId];
-
-        if (reqType == RequestType.ResolveMatch) {
-            uint256 matchId = requestToMatchId[requestId];
-            require(!matches[matchId].isResolved, "El partido ya se ha resuelto");
-
-            uint256 winningTeamUint = abi.decode(response, (uint256));
-            uint16 winningTeam = uint16(winningTeamUint);
-
-            require(winningTeam >= 1 && winningTeam <= 3, "El ganador no es valido");
-
-            matches[matchId].isResolved = true;
-            matches[matchId].winningTeam = winningTeam;
-            matches[matchId].endTime = block.timestamp;
-            
-            emit MatchResolved(matchId, winningTeam);
-            if(matchId == nextMatchToResolve) {
-                nextMatchToResolve++;
-            } 
-        } else if (reqType == RequestType.CreateMatch) {
-            uint256[] memory packedMatches = abi.decode(response, (uint256[]));
-
-            for(uint i = 0; i < packedMatches.length; i++) {
-                uint256 packed = packedMatches[i];
-
-                uint16 teamB = uint16(packed);
-                uint16 teamA = uint16(packed >> 16);
-                uint32 apiMatchId = uint32(packed >> 32);
-                uint256 startTime = uint256(uint64(packed >> 64));
-                
-                _createMatchInternal(apiMatchId, teamA, teamB, startTime);
-            }
-
-            if (packedMatches.length == 3) {
-                currentOffset += 3;
-            } else {
-                isFetchingMatches = false;
-                currentOffset = 0;
-            }
-        }
     }
 
     /// @notice Allows a user to place a bet on a specific team/outcome
