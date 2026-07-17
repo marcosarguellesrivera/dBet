@@ -23,8 +23,35 @@ export default function Home() {
   const [betAmount, setBetAmount] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("1"); // 1: Local, 2: Visitante, 3: Empate
 
-  const [selectedDateFilter, setSelectedDateFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
+
+  const formatDateString = (date) => {
+    const d = date.getDate().toString().padStart(2, "0");
+    const m = (date.getMonth() + 1).toString().padStart(2, "0");
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
+  const toInputFormat = (dateStr) => {
+    if (!dateStr || dateStr === "all") return "";
+    const [d, m, y] = dateStr.split("/");
+    return `${y}-${m}-${d}`;
+  };
+
+  const fromInputFormat = (dateStr) => {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    return `${d}/${m}/${y}`;
+  };
+
+  const parseDateString = (dateStr) => {
+    const [d, m, y] = dateStr.split("/");
+    return new Date(y, m - 1, d).getTime();
+  };
+
+  const [selectedDateFilter, setSelectedDateFilter] = useState(() =>
+    formatDateString(new Date()),
+  );
 
   useEffect(() => {
     if (window.ethereum) {
@@ -221,21 +248,43 @@ export default function Home() {
     }
   };
 
-  const uniqueDates = [
+  const todayStr = formatDateString(new Date());
+  const todayTime = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+
+  let allDates = [
     ...new Set(
-      matches.map((match) => {
-        const dateObj = new Date(match.startTime * 1000);
-        return dateObj.toLocaleDateString();
-      }),
+      matches.map((match) =>
+        formatDateString(new Date(match.startTime * 1000)),
+      ),
     ),
-  ].sort((a, b) => {
-    const [dayA, monthA, yearA] = a.split("/");
-    const [dayB, monthB, yearB] = b.split("/");
-    return (
-      new Date(`${yearA}-${monthA}-${dayA}`) -
-      new Date(`${yearB}-${monthB}-${dayB}`)
+  ];
+
+  if (!allDates.includes(todayStr)) allDates.push(todayStr);
+  if (selectedDateFilter !== "all" && !allDates.includes(selectedDateFilter)) {
+    allDates.push(selectedDateFilter);
+  }
+
+  allDates.sort((a, b) => parseDateString(a) - parseDateString(b));
+
+  const referenceTime =
+    selectedDateFilter === "all"
+      ? todayTime
+      : parseDateString(selectedDateFilter);
+
+  const futureOrToday = allDates.filter(
+    (d) => parseDateString(d) >= referenceTime,
+  );
+  const past = allDates.filter((d) => parseDateString(d) < referenceTime);
+
+  let navDates = futureOrToday.slice(0, 5);
+
+  if (navDates.length < 5 && past.length > 0) {
+    const needed = 5 - navDates.length;
+    const pastToInclude = past.slice(-needed);
+    navDates = [...pastToInclude, ...navDates].sort(
+      (a, b) => parseDateString(a) - parseDateString(b),
     );
-  });
+  }
 
   let filteredMatches = matches;
 
@@ -245,9 +294,7 @@ export default function Home() {
 
   if (selectedDateFilter !== "all") {
     filteredMatches = filteredMatches.filter((match) => {
-      const matchDateStr = new Date(
-        match.startTime * 1000,
-      ).toLocaleDateString();
+      const matchDateStr = formatDateString(new Date(match.startTime * 1000));
       return matchDateStr === selectedDateFilter;
     });
   }
@@ -408,7 +455,8 @@ export default function Home() {
               overflowX: "auto",
               paddingBottom: "10px",
               marginBottom: "15px",
-              borderBottom: "1px solid var(--border-color)",
+              borderBottom: "1px solid var(--border-color, #2a2a40)",
+              alignItems: "center",
             }}
           >
             <button
@@ -432,7 +480,8 @@ export default function Home() {
             >
               Todos
             </button>
-            {uniqueDates.map((dateStr, index) => (
+
+            {navDates.map((dateStr, index) => (
               <button
                 key={index}
                 className={`nav-btn ${selectedDateFilter === dateStr ? "active" : ""}`}
@@ -453,9 +502,42 @@ export default function Home() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {dateStr}
+                {dateStr === todayStr ? "Hoy" : dateStr}
               </button>
             ))}
+
+            <div
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <input
+                type="date"
+                value={
+                  selectedDateFilter !== "all"
+                    ? toInputFormat(selectedDateFilter)
+                    : ""
+                }
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDateFilter(fromInputFormat(e.target.value));
+                  }
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "20px",
+                  border: "1px solid var(--border-color, #2a2a40)",
+                  backgroundColor: "var(--bg-secondary, #24243e)",
+                  color: "var(--text-color, #fff)",
+                  cursor: "pointer",
+                  outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -469,7 +551,7 @@ export default function Home() {
           >
             {activeTab === "my-bets"
               ? "No tienes ninguna apuesta registrada para los filtros seleccionados."
-              : "No hay partidos programados para este día."}
+              : `No hay partidos disponibles para el día ${selectedDateFilter === "all" ? "seleccionado" : selectedDateFilter}.`}
           </p>
         ) : (
           <ul className="match-list" style={{ listStyle: "none", padding: 0 }}>
@@ -890,7 +972,7 @@ export default function Home() {
                             </div>
                           </div>
 
-                          <div style={{ marginBottom: "20px" }}>
+                          <div style={{ marginBottom: "20px", width: "100%" }}>
                             <p
                               style={{
                                 fontWeight: "bold",
@@ -908,12 +990,15 @@ export default function Home() {
                               onChange={(e) => setBetAmount(e.target.value)}
                               style={{
                                 width: "100%",
-                                padding: "12px",
+                                padding: "14px",
                                 borderRadius: "8px",
                                 border:
-                                  "1px solid var(--border-color, #2a2a40)",
-                                backgroundColor: "var(--bg-secondary, #24243e)",
-                                color: "var(--text-color, #fff)",
+                                  "1px solid var(--border-color, #3a3a50)",
+                                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                                color: "#fff",
+                                fontSize: "1rem",
+                                boxSizing: "border-box",
+                                outline: "none",
                               }}
                             />
                           </div>
