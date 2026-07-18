@@ -43,30 +43,6 @@
     "name": "Wolverhampton Wanderers",
     "crest": "https://crests.football-data.org/76.png"
   },
-  "351": {
-    "name": "Nottingham Forest FC",
-    "crest": "https://crests.football-data.org/351.png"
-  },
-  "354": {
-    "name": "Crystal Palace FC",
-    "crest": "https://crests.football-data.org/354.png"
-  },
-  "397": {
-    "name": "Brighton & Hove Albion",
-    "crest": "https://crests.football-data.org/397.png"
-  },
-  "402": {
-    "name": "Brentford FC",
-    "crest": "https://crests.football-data.org/402.png"
-  },
-  "563": {
-    "name": "West Ham United FC",
-    "crest": "https://crests.football-data.org/563.png"
-  },
-  "1044": {
-    "name": "AFC Bournemouth",
-    "crest": "https://crests.football-data.org/1044.png"
-  },
   "77": {
     "name": "Athletic Club",
     "crest": "https://crests.football-data.org/77.png"
@@ -118,26 +94,6 @@
   "95": {
     "name": "Valencia CF",
     "crest": "https://crests.football-data.org/95.png"
-  },
-  "263": {
-    "name": "Deportivo Alavés",
-    "crest": "https://crests.football-data.org/263.png"
-  },
-  "275": {
-    "name": "UD Las Palmas",
-    "crest": "https://crests.football-data.org/275.png"
-  },
-  "260": {
-    "name": "Girona FC",
-    "crest": "https://crests.football-data.org/298.png"
-  },
-  "558": {
-    "name": "RC Celta de Vigo",
-    "crest": "https://crests.football-data.org/558.png"
-  },
-  "559": {
-    "name": "Sevilla FC",
-    "crest": "https://crests.football-data.org/559.png"
   },
   "98": {
     "name": "AC Milan",
@@ -199,12 +155,240 @@
     "name": "Hellas Verona FC",
     "crest": "https://crests.football-data.org/119.png"
   },
+  "260": {
+    "name": "Girona FC",
+    "crest": "https://crests.football-data.org/298.png"
+  },
+  "263": {
+    "name": "Deportivo Alavés",
+    "crest": "https://crests.football-data.org/263.png"
+  },
+  "275": {
+    "name": "UD Las Palmas",
+    "crest": "https://crests.football-data.org/275.png"
+  },
+  "351": {
+    "name": "Nottingham Forest FC",
+    "crest": "https://crests.football-data.org/351.png"
+  },
+  "354": {
+    "name": "Crystal Palace FC",
+    "crest": "https://crests.football-data.org/354.png"
+  },
+  "397": {
+    "name": "Brighton & Hove Albion",
+    "crest": "https://crests.football-data.org/397.png"
+  },
+  "402": {
+    "name": "Brentford FC",
+    "crest": "https://crests.football-data.org/402.png"
+  },
   "445": {
     "name": "Empoli FC",
     "crest": "https://crests.football-data.org/445.png"
   },
+  "558": {
+    "name": "RC Celta de Vigo",
+    "crest": "https://crests.football-data.org/558.png"
+  },
+  "559": {
+    "name": "Sevilla FC",
+    "crest": "https://crests.football-data.org/559.png"
+  },
+  "563": {
+    "name": "West Ham United FC",
+    "crest": "https://crests.football-data.org/563.png"
+  },
+  "760": {
+    "name": "Spain",
+    "crest": "https://crests.football-data.org/760.svg"
+  },
+  "762": {
+    "name": "Argentina",
+    "crest": "https://crests.football-data.org/762.png"
+  },
+  "764": {
+    "name": "Brazil",
+    "crest": "https://crests.football-data.org/764.svg"
+  },
+  "765": {
+    "name": "Portugal",
+    "crest": "https://crests.football-data.org/765.svg"
+  },
+  "766": {
+    "name": "Netherlands",
+    "crest": "https://crests.football-data.org/766.svg"
+  },
+  "769": {
+    "name": "Mexico",
+    "crest": "https://crests.football-data.org/769.svg"
+  },
+  "770": {
+    "name": "England",
+    "crest": "https://crests.football-data.org/770.svg"
+  },
+  "772": {
+    "name": "Germany",
+    "crest": "https://crests.football-data.org/772.svg"
+  },
+  "773": {
+    "name": "France",
+    "crest": "https://crests.football-data.org/773.svg"
+  },
+  "779": {
+    "name": "United States",
+    "crest": "https://crests.football-data.org/779.svg"
+  },
+  "784": {
+    "name": "Italy",
+    "crest": "https://crests.football-data.org/784.svg"
+  },
+  "794": {
+    "name": "Poland",
+    "crest": "https://crests.football-data.org/794.svg"
+  },
+  "801": {
+    "name": "Croatia",
+    "crest": "https://crests.football-data.org/801.svg"
+  },
+  "804": {
+    "name": "Morocco",
+    "crest": "https://crests.football-data.org/804.svg"
+  },
+  "805": {
+    "name": "Senegal",
+    "crest": "https://crests.football-data.org/805.svg"
+  },
+  "808": {
+    "name": "South Korea",
+    "crest": "https://crests.football-data.org/808.svg"
+  },
+  "815": {
+    "name": "Japan",
+    "crest": "https://crests.football-data.org/815.svg"
+  },
+  "818": {
+    "name": "Australia",
+    "crest": "https://crests.football-data.org/818.svg"
+  },
+  "825": {
+    "name": "Saudi Arabia",
+    "crest": "https://crests.football-data.org/825.svg"
+  },
+  "837": {
+    "name": "Colombia",
+    "crest": "https://crests.football-data.org/837.svg"
+  },
+  "840": {
+    "name": "Canada",
+    "crest": "https://crests.football-data.org/840.svg"
+  },
+  "851": {
+    "name": "Ecuador",
+    "crest": "https://crests.football-data.org/851.svg"
+  },
+  "858": {
+    "name": "Uruguay",
+    "crest": "https://crests.football-data.org/858.svg"
+  },
+  "861": {
+    "name": "Belgium",
+    "crest": "https://crests.football-data.org/861.svg"
+  },
+  "862": {
+    "name": "Chile",
+    "crest": "https://crests.football-data.org/862.svg"
+  },
+  "1044": {
+    "name": "AFC Bournemouth",
+    "crest": "https://crests.football-data.org/1044.png"
+  },
   "1106": {
     "name": "US Lecce",
     "crest": "https://crests.football-data.org/1106.png"
+  },
+  "1765": {
+    "name": "Fluminense FC",
+    "crest": "https://crests.football-data.org/1765.png"
+  },
+  "1766": {
+    "name": "Clube Atlético Mineiro",
+    "crest": "https://crests.football-data.org/1766.png"
+  },
+  "1767": {
+    "name": "Grêmio FBPA",
+    "crest": "https://crests.football-data.org/1767.png"
+  },
+  "1768": {
+    "name": "Club Athletico Paranaense",
+    "crest": "https://crests.football-data.org/1768.png"
+  },
+  "1769": {
+    "name": "SE Palmeiras",
+    "crest": "https://crests.football-data.org/1769.png"
+  },
+  "1770": {
+    "name": "São Paulo FC",
+    "crest": "https://crests.football-data.org/1770.png"
+  },
+  "1771": {
+    "name": "SC Corinthians Paulista",
+    "crest": "https://crests.football-data.org/1771.png"
+  },
+  "1775": {
+    "name": "Botafogo FR",
+    "crest": "https://crests.football-data.org/1775.png"
+  },
+  "1777": {
+    "name": "Cruzeiro EC",
+    "crest": "https://crests.football-data.org/1777.png"
+  },
+  "1779": {
+    "name": "CR Vasco da Gama",
+    "crest": "https://crests.football-data.org/1779.png"
+  },
+  "1783": {
+    "name": "CR Flamengo",
+    "crest": "https://crests.football-data.org/1783.png"
+  },
+  "1788": {
+    "name": "EC Vitória",
+    "crest": "https://crests.football-data.org/1788.png"
+  },
+  "1838": {
+    "name": "EC Juventude",
+    "crest": "https://crests.football-data.org/1838.png"
+  },
+  "4241": {
+    "name": "EC Bahia",
+    "crest": "https://crests.football-data.org/4241.png"
+  },
+  "4250": {
+    "name": "Fortaleza EC",
+    "crest": "https://crests.football-data.org/4250.png"
+  },
+  "4259": {
+    "name": "Red Bull Bragantino",
+    "crest": "https://crests.football-data.org/4259.png"
+  },
+  "6684": {
+    "name": "SC Internacional",
+    "crest": "https://crests.football-data.org/6684.png"
+  },
+  "6685": {
+    "name": "Santos FC",
+    "crest": "https://crests.football-data.org/6685.png"
+  },
+  "6689": {
+    "name": "Criciúma EC",
+    "crest": "https://crests.football-data.org/6689.png"
+  },
+  "6690": {
+    "name": "Atlético Clube Goianiense",
+    "crest": "https://crests.football-data.org/6690.png"
+  },
+  "6692": {
+    "name": "Cuiabá EC",
+    "crest": "https://crests.football-data.org/6692.png"
   }
 }
