@@ -6,6 +6,19 @@ describe("Pruebas Unitarias - dBet Smart Contract", function () {
   let owner, oracleForwarder, user1, user2, user3;
   let matchId;
 
+  const injectMatch = async (apiMatchId, teamA, teamB, startTime) => {
+    const packed =
+      (BigInt(startTime) << 64n) |
+      (BigInt(apiMatchId) << 32n) |
+      (BigInt(teamA) << 16n) |
+      BigInt(teamB);
+    const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["uint256[]"],
+      [[packed]],
+    );
+    await dBet.connect(oracleForwarder).receiveMatches(encodedData);
+  };
+
   beforeEach(async function () {
     [owner, oracleForwarder, user1, user2, user3] = await ethers.getSigners();
 
@@ -55,7 +68,7 @@ describe("Pruebas Unitarias - dBet Smart Contract", function () {
 
     beforeEach(async function () {
       futureTime = Math.floor(Date.now() / 1000) + 3600;
-      await dBet.createMatch(202, 1, 2, futureTime); 
+      await injectMatch(202, 1, 2, futureTime);
       matchId = 1;
     });
 
@@ -93,7 +106,7 @@ describe("Pruebas Unitarias - dBet Smart Contract", function () {
   describe("3. Resolución y Reclamación de Premios", function () {
     beforeEach(async function () {
       const futureTime = Math.floor(Date.now() / 1000) + 3600;
-      await dBet.createMatch(303, 7, 8, futureTime);
+      await injectMatch(303, 7, 8, futureTime);
       matchId = 1;
 
       await dBet

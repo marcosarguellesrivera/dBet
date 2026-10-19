@@ -16,9 +16,6 @@ export default function Home() {
   const [account, setAccount] = useState("");
   const [matches, setMatches] = useState([]);
   const [fetchedTeams, setFetchedTeams] = useState({});
-  const [teamA, setTeamA] = useState("");
-  const [teamB, setTeamB] = useState("");
-  const [matchDate, setMatchDate] = useState("");
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [betAmount, setBetAmount] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("1"); // 1: Local, 2: Visitante, 3: Empate
@@ -190,27 +187,6 @@ export default function Home() {
     }
   };
 
-  const createMatch = async () => {
-    try {
-      setErrorMessage("");
-      const startTimeUnix = Math.floor(new Date(matchDate).getTime() / 1000);
-      const tx = await contractRef.current.createMatch(
-        0,
-        parseInt(teamA),
-        parseInt(teamB),
-        startTimeUnix,
-      );
-      await tx.wait();
-      setTeamA("");
-      setTeamB("");
-      setMatchDate("");
-      await fetchMatches();
-    } catch (error) {
-      let decoded = decodeError(error);
-      setErrorMessage(decoded.error || "Error al crear el partido");
-    }
-  };
-
   const placeBet = async () => {
     if (!selectedMatch) return;
     try {
@@ -376,30 +352,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      <div className="card">
-        <h2>Crear Nuevo Partido</h2>
-        <div className="form-group">
-          <input
-            type="number"
-            placeholder="ID Equipo Local"
-            value={teamA}
-            onChange={(e) => setTeamA(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="ID Equipo Visitante"
-            value={teamB}
-            onChange={(e) => setTeamB(e.target.value)}
-          />
-          <input
-            type="datetime-local"
-            value={matchDate}
-            onChange={(e) => setMatchDate(e.target.value)}
-          />
-          <button onClick={createMatch}>Programar Partido</button>
-        </div>
-      </div>
 
       <div className="card">
         <div

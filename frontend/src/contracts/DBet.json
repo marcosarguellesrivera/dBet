@@ -236,34 +236,6 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint32",
-          "name": "_apiMatchId",
-          "type": "uint32"
-        },
-        {
-          "internalType": "uint16",
-          "name": "_teamA",
-          "type": "uint16"
-        },
-        {
-          "internalType": "uint16",
-          "name": "_teamB",
-          "type": "uint16"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_startTime",
-          "type": "uint256"
-        }
-      ],
-      "name": "createMatch",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "keystoneForwarder",
       "outputs": [

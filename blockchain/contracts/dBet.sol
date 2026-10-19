@@ -82,15 +82,6 @@ contract DBet is ConfirmedOwner {
         emit MatchResolved(matchId, winningTeam);
     }
 
-    /// @notice Allows the owner to manually create a match bypassing the oracle
-    /// @param _apiMatchId ID of the match
-    /// @param _teamA ID of the home team
-    /// @param _teamB ID of the away team
-    /// @param _startTime Unix timestamp of the match start
-    function createMatch(uint32 _apiMatchId, uint16 _teamA, uint16 _teamB, uint256 _startTime) external onlyOwner {
-        _createMatchInternal(_apiMatchId, _teamA, _teamB, _startTime);
-    }
-
     /// @notice Internal logic to create a match and prevent duplicates
     /// @dev Uses keccak256 hash to verify uniqueness based on teams and start time
     function _createMatchInternal(uint32 _apiMatchId, uint16 _teamA, uint16 _teamB, uint256 _startTime) internal {
