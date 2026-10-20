@@ -116,6 +116,17 @@ export default function Home() {
   const configureBlockchain = async () => {
     try {
       const rawProvider = await detectEthereumProvider();
+      if (!rawProvider) {
+        setErrorMessage("Por favor, instala y conecta MetaMask.");
+        return;
+      }
+      if (!CONTRACT_ADDRESS) {
+        console.error(
+          "Falta NEXT_PUBLIC_CONTRACT_ADDRESS en frontend/.env.local",
+        );
+        setErrorMessage("La dirección del contrato no está configurada.");
+        return;
+      }
       try {
         const sepoliaChainId = "0xaa36a7";
         await rawProvider.request({
@@ -278,739 +289,375 @@ export default function Home() {
   const totalMyBets = matches.filter((match) => match.userBet !== null).length;
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1 className="title">⚽ DBet</h1>
-        {!account ? (
-          <button onClick={configureBlockchain}>Conectar MetaMask</button>
-        ) : (
-          <div className="wallet-badge">
-            🟢 {account.substring(0, 6)}...{account.substring(38)}
+    <>
+      <header className="top-nav">
+        <div className="container top-nav-inner">
+          <div className="brand">
+            <span className="stripe stripe-mini" aria-hidden="true" />
+            DBet
           </div>
-        )}
-      </div>
+          {!account ? (
+            <button className="btn btn-sm" onClick={configureBlockchain}>
+              Conectar MetaMask
+            </button>
+          ) : (
+            <div className="wallet-badge">
+              <span className="wallet-dot" aria-hidden="true" />
+              {account.substring(0, 6)}...{account.substring(38)}
+            </div>
+          )}
+        </div>
+      </header>
 
       {errorMessage && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100vw",
-            height: "100vh",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            backdropFilter: "blur(3px)",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "var(--bg-secondary, #1e1e2f)",
-              border: "1px solid #ef4444",
-              borderRadius: "12px",
-              padding: "25px",
-              maxWidth: "400px",
-              width: "90%",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "2.5rem", marginBottom: "10px" }}>⚠️</div>
-            <h3
-              style={{ color: "#ef4444", marginTop: 0, marginBottom: "15px" }}
-            >
-              Algo ha fallado
-            </h3>
-            <p
-              style={{
-                color: "var(--text-color, #fff)",
-                lineHeight: "1.5",
-                marginBottom: "20px",
-              }}
-            >
-              {errorMessage}
-            </p>
-            <button
-              onClick={() => setErrorMessage("")}
-              style={{
-                padding: "12px 20px",
-                backgroundColor: "#ef4444",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                width: "100%",
-                fontSize: "1rem",
-              }}
-            >
-              Entendido
-            </button>
+        <div className="modal-backdrop" role="alertdialog" aria-modal="true">
+          <div className="modal">
+            <div className="modal-stripe" />
+            <div className="modal-body">
+              <span className="label-uppercase modal-eyebrow">Error</span>
+              <h3 className="modal-title">Algo ha fallado</h3>
+              <p className="modal-text">{errorMessage}</p>
+              <button
+                className="btn btn-solid btn-block"
+                onClick={() => setErrorMessage("")}
+              >
+                Entendido
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-            borderBottom: "2px solid #2a2a40",
-            paddingBottom: "10px",
-          }}
-        >
-          <div style={{ display: "flex", gap: "20px" }}>
-            <h2
+      <main className="container">
+        <section className="hero">
+          <p className="label-uppercase hero-eyebrow">
+            Apuestas de fútbol · Sepolia
+          </p>
+          <h1 className="hero-title">Apuesta. Sin intermediarios.</h1>
+          <p className="hero-lead">
+            Elige partido, pronostica el resultado y deja que el contrato
+            liquide. Resultados verificados por oráculo, premios directos a tu
+            wallet.
+          </p>
+        </section>
+
+        <div className="stripe" aria-hidden="true" />
+
+        <section className="board">
+          <div className="tabs" role="tablist">
+            <button
+              role="tab"
+              aria-selected={activeTab === "all"}
+              className={`tab label-uppercase ${activeTab === "all" ? "active" : ""}`}
               onClick={() => setActiveTab("all")}
-              style={{
-                margin: 0,
-                cursor: "pointer",
-                color: activeTab === "all" ? "var(--primary, #3b82f6)" : "#888",
-                borderBottom:
-                  activeTab === "all" ? "3px solid var(--primary)" : "none",
-                paddingBottom: "5px",
-              }}
             >
               Cartelera
-            </h2>
-            <h2
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === "my-bets"}
+              className={`tab label-uppercase ${activeTab === "my-bets" ? "active" : ""}`}
+              disabled={!account}
               onClick={() => {
                 if (account) setActiveTab("my-bets");
               }}
-              style={{
-                margin: 0,
-                cursor: account ? "pointer" : "not-allowed",
-                color:
-                  activeTab === "my-bets" ? "var(--primary, #3b82f6)" : "#888",
-                borderBottom:
-                  activeTab === "my-bets" ? "3px solid var(--primary)" : "none",
-                paddingBottom: "5px",
-                opacity: account ? 1 : 0.4,
-              }}
             >
-              Mis Apuestas ({totalMyBets})
-            </h2>
-          </div>
-        </div>
-
-        {matches.length > 0 && (
-          <div
-            className="date-nav-bar"
-            style={{
-              display: "flex",
-              gap: "10px",
-              overflowX: "auto",
-              paddingBottom: "10px",
-              marginBottom: "15px",
-              borderBottom: "1px solid var(--border-color, #2a2a40)",
-              alignItems: "center",
-            }}
-          >
-            <button
-              className={`nav-btn ${selectedDateFilter === "all" ? "active" : ""}`}
-              onClick={() => setSelectedDateFilter("all")}
-              style={{
-                padding: "8px 16px",
-                borderRadius: "20px",
-                border: "none",
-                cursor: "pointer",
-                backgroundColor:
-                  selectedDateFilter === "all"
-                    ? "var(--primary, #3b82f6)"
-                    : "var(--bg-secondary, #24243e)",
-                color:
-                  selectedDateFilter === "all"
-                    ? "#fff"
-                    : "var(--text-color, #fff)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Todos
+              Mis Apuestas
+              <span className="tab-count">{totalMyBets}</span>
             </button>
-
-            {navDates.map((dateStr, index) => (
-              <button
-                key={index}
-                className={`nav-btn ${selectedDateFilter === dateStr ? "active" : ""}`}
-                onClick={() => setSelectedDateFilter(dateStr)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "20px",
-                  border: "none",
-                  cursor: "pointer",
-                  backgroundColor:
-                    selectedDateFilter === dateStr
-                      ? "var(--primary, #3b82f6)"
-                      : "var(--bg-secondary, #24243e)",
-                  color:
-                    selectedDateFilter === dateStr
-                      ? "#fff"
-                      : "var(--text-color, #fff)",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {dateStr === todayStr ? "Hoy" : dateStr}
-              </button>
-            ))}
-
-            <div
-              style={{
-                marginLeft: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <input
-                type="date"
-                value={
-                  selectedDateFilter !== "all"
-                    ? toInputFormat(selectedDateFilter)
-                    : ""
-                }
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setSelectedDateFilter(fromInputFormat(e.target.value));
-                  }
-                }}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "20px",
-                  border: "1px solid var(--border-color, #2a2a40)",
-                  backgroundColor: "var(--bg-secondary, #24243e)",
-                  color: "var(--text-color, #fff)",
-                  cursor: "pointer",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
-              />
-            </div>
           </div>
-        )}
 
-        {filteredMatches.length === 0 ? (
-          <p
-            style={{
-              color: "var(--text-muted, #888)",
-              textAlign: "center",
-              padding: "20px",
-            }}
-          >
-            {activeTab === "my-bets"
-              ? "No tienes ninguna apuesta registrada para los filtros seleccionados."
-              : `No hay partidos disponibles para el día ${selectedDateFilter === "all" ? "seleccionado" : selectedDateFilter}.`}
-          </p>
-        ) : (
-          <ul className="match-list" style={{ listStyle: "none", padding: 0 }}>
-            {filteredMatches.map((match) => {
-              const currentTime = Math.floor(Date.now() / 1000);
-              const hasStarted = currentTime >= match.startTime;
+          {matches.length > 0 && (
+            <div className="date-nav">
+              <button
+                className={`date-chip ${selectedDateFilter === "all" ? "active" : ""}`}
+                onClick={() => setSelectedDateFilter("all")}
+              >
+                Todos
+              </button>
 
-              let statusText = "Abierto";
-              let statusClass = "status-open";
+              {navDates.map((dateStr, index) => (
+                <button
+                  key={index}
+                  className={`date-chip ${selectedDateFilter === dateStr ? "active" : ""}`}
+                  onClick={() => setSelectedDateFilter(dateStr)}
+                >
+                  {dateStr === todayStr ? "Hoy" : dateStr}
+                </button>
+              ))}
 
-              if (match.isResolved) {
-                statusText = "Finalizado";
-                statusClass = "status-resolved";
-              } else if (hasStarted) {
-                statusText = "En juego";
-                statusClass = "status-playing";
-              }
-
-              const infoA = displayTeam(match.teamA);
-              const infoB = displayTeam(match.teamB);
-              const timeString = new Date(
-                match.startTime * 1000,
-              ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-              const isThisCardSelected = selectedMatch?.id === match.id;
-
-              return (
-                <li
-                  key={match.id}
-                  className={`match-item ${isThisCardSelected ? "selected-inline" : ""}`}
-                  onClick={() => {
-                    if (isThisCardSelected) {
-                      setSelectedMatch(null);
-                    } else {
-                      setSelectedMatch(match);
+              <div className="date-picker">
+                <input
+                  type="date"
+                  className="text-input compact"
+                  aria-label="Elegir fecha"
+                  value={
+                    selectedDateFilter !== "all"
+                      ? toInputFormat(selectedDateFilter)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDateFilter(fromInputFormat(e.target.value));
                     }
                   }}
-                  style={{
-                    cursor: "pointer",
-                    border: isThisCardSelected
-                      ? "2px solid var(--primary, #3b82f6)"
-                      : "1px solid var(--border-color, #2a2a40)",
-                    borderRadius: "12px",
-                    padding: "15px",
-                    marginBottom: "12px",
-                    display: "flex",
-                    flexDirection: "column",
-                    backgroundColor: "var(--card-bg, #1a1a2e)",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                      width: "100%",
+                />
+              </div>
+            </div>
+          )}
+
+          {filteredMatches.length === 0 ? (
+            <p className="empty-state">
+              {activeTab === "my-bets"
+                ? "No tienes ninguna apuesta registrada para los filtros seleccionados."
+                : `No hay partidos disponibles para el día ${selectedDateFilter === "all" ? "seleccionado" : selectedDateFilter}.`}
+            </p>
+          ) : (
+            <ul className="match-list">
+              {filteredMatches.map((match) => {
+                const currentTime = Math.floor(Date.now() / 1000);
+                const hasStarted = currentTime >= match.startTime;
+
+                let statusText = "Abierto";
+                let statusClass = "status-open";
+
+                if (match.isResolved) {
+                  statusText = "Finalizado";
+                  statusClass = "status-resolved";
+                } else if (hasStarted) {
+                  statusText = "En juego";
+                  statusClass = "status-playing";
+                }
+
+                const infoA = displayTeam(match.teamA);
+                const infoB = displayTeam(match.teamB);
+                const timeString = new Date(
+                  match.startTime * 1000,
+                ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+                const isThisCardSelected = selectedMatch?.id === match.id;
+
+                const pickOptions = [
+                  { value: "1", key: "Local", label: infoA.name },
+                  { value: "3", key: "Empate", label: "X" },
+                  { value: "2", key: "Visitante", label: infoB.name },
+                ];
+
+                const canClaim =
+                  match.userBet &&
+                  match.userBet.selectedTeam === match.winningTeam &&
+                  !match.userBet.hasClaimed;
+
+                return (
+                  <li
+                    key={match.id}
+                    className={`match-item ${isThisCardSelected ? "selected" : ""}`}
+                    onClick={() => {
+                      if (isThisCardSelected) {
+                        setSelectedMatch(null);
+                      } else {
+                        setSelectedMatch(match);
+                      }
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: "0.85rem",
-                        color: "var(--text-muted, #888)",
-                      }}
-                    >
-                      <span>
-                        #{match.id} | 🕒 {timeString}
-                      </span>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "8px",
-                          alignItems: "center",
-                        }}
-                      >
-                        {match.userBet && (
-                          <span
-                            style={{
-                              backgroundColor: "rgba(16, 185, 129, 0.2)",
-                              color: "#10b981",
-                              padding: "2px 8px",
-                              borderRadius: "10px",
-                              fontSize: "0.75rem",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            Apostado
+                    <div className="match-summary">
+                      <div className="match-meta">
+                        <div className="match-meta-left">
+                          <span className="match-time">{timeString}</span>
+                          <span className="caption">#{match.id}</span>
+                        </div>
+                        <div className="match-badges">
+                          {match.userBet && (
+                            <span className="badge badge-bet">Apostado</span>
+                          )}
+                          <span className={`badge ${statusClass}`}>
+                            {statusText}
                           </span>
-                        )}
-                        <span className={`match-status ${statusClass}`}>
-                          {statusText}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "15px",
-                        padding: "10px 0",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          flex: 1,
-                          justifyContent: "flex-end",
-                        }}
-                      >
-                        <span style={{ fontWeight: "bold" }}>{infoA.name}</span>
-                        {infoA.crest && (
-                          <img
-                            src={infoA.crest}
-                            alt={infoA.name}
-                            width="28"
-                            height="28"
-                            style={{ objectFit: "contain" }}
-                            onError={handleCrestError}
-                          />
-                        )}
+                        </div>
                       </div>
 
-                      <div
-                        style={{
-                          color: "var(--text-muted, #888)",
-                          fontWeight: "bold",
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        VS
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          flex: 1,
-                          justifyContent: "flex-start",
-                        }}
-                      >
-                        {infoB.crest && (
-                          <img
-                            src={infoB.crest}
-                            alt={infoB.name}
-                            width="28"
-                            height="28"
-                            style={{ objectFit: "contain" }}
-                            onError={handleCrestError}
-                          />
-                        )}
-                        <span style={{ fontWeight: "bold" }}>{infoB.name}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {isThisCardSelected && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        marginTop: "15px",
-                        paddingTop: "15px",
-                        borderTop: "1px solid var(--border-color, #3a3a50)",
-                        cursor: "default",
-                        width: "100%",
-                      }}
-                    >
-                      {match.userBet && (
-                        <div
-                          style={{
-                            backgroundColor: "rgba(16, 185, 129, 0.1)",
-                            border: "1px solid rgb(16, 185, 129)",
-                            borderRadius: "8px",
-                            padding: "12px",
-                            marginBottom: "20px",
-                            fontSize: "0.95rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: "block",
-                              fontWeight: "bold",
-                              color: "rgb(16, 185, 129)",
-                              marginBottom: "4px",
-                            }}
-                          >
-                            Tu apuesta registrada:
-                          </span>
-                          Has apostado{" "}
-                          <strong style={{ fontSize: "1.05rem" }}>
-                            {match.userBet.amount} ETH
-                          </strong>{" "}
-                          al pronóstico de{" "}
-                          <strong style={{ color: "var(--primary, #3b82f6)" }}>
-                            {match.userBet.selectedTeam === 1 && infoA.name}
-                            {match.userBet.selectedTeam === 2 && infoB.name}
-                            {match.userBet.selectedTeam === 3 && "Empate (X)"}
-                          </strong>
-                          .
-                          {match.userBet.hasClaimed && (
-                            <span
-                              style={{
-                                display: "block",
-                                marginTop: "5px",
-                                color: "var(--text-muted, #888)",
-                                fontSize: "0.85rem",
-                              }}
-                            >
-                              El premio de esta apuesta ya ha sido retirado.
-                            </span>
+                      <div className="match-teams">
+                        <div className="team home">
+                          <span className="team-name">{infoA.name}</span>
+                          {infoA.crest && (
+                            <img
+                              className="team-crest"
+                              src={infoA.crest}
+                              alt={infoA.name}
+                              width="36"
+                              height="36"
+                              onError={handleCrestError}
+                            />
                           )}
                         </div>
-                      )}
 
-                      {match.isResolved && match.winningTeam !== 0 && (
-                        <div
-                          style={{
-                            backgroundColor: "rgba(59, 130, 246, 0.1)",
-                            padding: "15px",
-                            borderRadius: "8px",
-                            marginBottom: "20px",
-                            textAlign: "center",
-                          }}
-                        >
-                          <span
-                            style={{
-                              display: "block",
-                              fontSize: "0.9rem",
-                              color: "var(--text-muted, #888)",
-                              marginBottom: "5px",
-                            }}
-                          >
-                            Resultado Oficial:
-                          </span>
-                          <strong
-                            style={{
-                              fontSize: "1.1rem",
-                              color: "var(--primary, #3b82f6)",
-                            }}
-                          >
-                            {match.winningTeam === 3
-                              ? "Empate"
-                              : match.winningTeam === 1
-                                ? infoA.name
-                                : infoB.name}
-                          </strong>
-                        </div>
-                      )}
+                        <div className="versus">VS</div>
 
-                      {!match.isResolved ? (
-                        <div>
-                          <div style={{ marginBottom: "20px" }}>
-                            <p
-                              style={{
-                                fontWeight: "bold",
-                                marginBottom: "10px",
-                              }}
-                            >
-                              1. Selecciona tu pronóstico:
-                            </p>
-
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 1fr 1fr",
-                                gap: "10px",
-                              }}
-                            >
-                              <label
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  padding: "15px 10px",
-                                  border:
-                                    selectedTeam === "1"
-                                      ? "2px solid var(--primary, #3b82f6)"
-                                      : "1px solid var(--border-color, #2a2a40)",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  backgroundColor:
-                                    selectedTeam === "1"
-                                      ? "rgba(59, 130, 246, 0.1)"
-                                      : "transparent",
-                                  transition: "all 0.2s ease",
-                                }}
-                              >
-                                <input
-                                  type="radio"
-                                  name="betSelection"
-                                  value="1"
-                                  checked={selectedTeam === "1"}
-                                  onChange={(e) =>
-                                    setSelectedTeam(e.target.value)
-                                  }
-                                  style={{ display: "none" }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--text-muted, #888)",
-                                    marginBottom: "5px",
-                                  }}
-                                >
-                                  Local
-                                </span>
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {infoA.name}
-                                </span>
-                              </label>
-
-                              <label
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  padding: "15px 10px",
-                                  border:
-                                    selectedTeam === "3"
-                                      ? "2px solid var(--primary, #3b82f6)"
-                                      : "1px solid var(--border-color, #2a2a40)",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  backgroundColor:
-                                    selectedTeam === "3"
-                                      ? "rgba(59, 130, 246, 0.1)"
-                                      : "transparent",
-                                  transition: "all 0.2s ease",
-                                }}
-                              >
-                                <input
-                                  type="radio"
-                                  name="betSelection"
-                                  value="3"
-                                  checked={selectedTeam === "3"}
-                                  onChange={(e) =>
-                                    setSelectedTeam(e.target.value)
-                                  }
-                                  style={{ display: "none" }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--text-muted, #888)",
-                                    marginBottom: "5px",
-                                  }}
-                                >
-                                  Empate
-                                </span>
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  X
-                                </span>
-                              </label>
-
-                              <label
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  alignItems: "center",
-                                  padding: "15px 10px",
-                                  border:
-                                    selectedTeam === "2"
-                                      ? "2px solid var(--primary, #3b82f6)"
-                                      : "1px solid var(--border-color, #2a2a40)",
-                                  borderRadius: "8px",
-                                  cursor: "pointer",
-                                  backgroundColor:
-                                    selectedTeam === "2"
-                                      ? "rgba(59, 130, 246, 0.1)"
-                                      : "transparent",
-                                  transition: "all 0.2s ease",
-                                }}
-                              >
-                                <input
-                                  type="radio"
-                                  name="betSelection"
-                                  value="2"
-                                  checked={selectedTeam === "2"}
-                                  onChange={(e) =>
-                                    setSelectedTeam(e.target.value)
-                                  }
-                                  style={{ display: "none" }}
-                                />
-                                <span
-                                  style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--text-muted, #888)",
-                                    marginBottom: "5px",
-                                  }}
-                                >
-                                  Visitante
-                                </span>
-                                <span
-                                  style={{
-                                    fontWeight: "bold",
-                                    textAlign: "center",
-                                  }}
-                                >
-                                  {infoB.name}
-                                </span>
-                              </label>
-                            </div>
-                          </div>
-
-                          <div style={{ marginBottom: "20px", width: "100%" }}>
-                            <p
-                              style={{
-                                fontWeight: "bold",
-                                marginBottom: "10px",
-                              }}
-                            >
-                              2. Importe a apostar (ETH):
-                            </p>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min="0.01"
-                              placeholder="Ej: 0.05"
-                              value={betAmount}
-                              onChange={(e) => setBetAmount(e.target.value)}
-                              style={{
-                                width: "100%",
-                                padding: "14px",
-                                borderRadius: "8px",
-                                border:
-                                  "1px solid var(--border-color, #3a3a50)",
-                                backgroundColor: "rgba(0, 0, 0, 0.2)",
-                                color: "#fff",
-                                fontSize: "1rem",
-                                boxSizing: "border-box",
-                                outline: "none",
-                              }}
+                        <div className="team away">
+                          {infoB.crest && (
+                            <img
+                              className="team-crest"
+                              src={infoB.crest}
+                              alt={infoB.name}
+                              width="36"
+                              height="36"
+                              onError={handleCrestError}
                             />
-                          </div>
-
-                          <button
-                            onClick={placeBet}
-                            disabled={!betAmount || Number(betAmount) <= 0}
-                            style={{
-                              width: "100%",
-                              padding: "15px",
-                              fontSize: "1.1rem",
-                              opacity:
-                                !betAmount || Number(betAmount) <= 0 ? 0.5 : 1,
-                            }}
-                          >
-                            Confirmar Apuesta
-                          </button>
+                          )}
+                          <span className="team-name">{infoB.name}</span>
                         </div>
-                      ) : (
-                        <div style={{ textAlign: "center" }}>
-                          <p style={{ marginBottom: "20px" }}>
-                            {match.userBet &&
-                            match.userBet.selectedTeam === match.winningTeam &&
-                            !match.userBet.hasClaimed
-                              ? "¡Has ganado la apuesta! Haz clic abajo para retirar tus fondos."
-                              : "El partido ha finalizado. Comprueba si has ganado."}
-                          </p>
-                          <button
-                            onClick={claimReward}
-                            disabled={
-                              !match.userBet ||
-                              match.userBet.selectedTeam !==
-                                match.winningTeam ||
-                              match.userBet.hasClaimed
-                            }
-                            style={{
-                              width: "100%",
-                              opacity:
-                                !match.userBet ||
-                                match.userBet.selectedTeam !==
-                                  match.winningTeam ||
-                                match.userBet.hasClaimed
-                                  ? 0.4
-                                  : 1,
-                            }}
-                          >
-                            {match.userBet?.hasClaimed
-                              ? "Premio ya Retirado"
-                              : "Reclamar Premio"}
-                          </button>
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </div>
+
+                    {isThisCardSelected && (
+                      <div
+                        className="bet-panel"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {match.userBet && (
+                          <div className="callout">
+                            <span className="label-uppercase">
+                              Tu apuesta registrada
+                            </span>
+                            Has apostado{" "}
+                            <strong>{match.userBet.amount} ETH</strong> al
+                            pronóstico de{" "}
+                            <strong>
+                              {match.userBet.selectedTeam === 1 && infoA.name}
+                              {match.userBet.selectedTeam === 2 && infoB.name}
+                              {match.userBet.selectedTeam === 3 && "Empate (X)"}
+                            </strong>
+                            .
+                            {match.userBet.hasClaimed && (
+                              <span className="caption callout-note">
+                                El premio de esta apuesta ya ha sido retirado.
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {match.isResolved && match.winningTeam !== 0 && (
+                          <div className="result-cell">
+                            <span className="result-value">
+                              {match.winningTeam === 3
+                                ? "Empate"
+                                : match.winningTeam === 1
+                                  ? infoA.name
+                                  : infoB.name}
+                            </span>
+                            <span className="label-uppercase caption">
+                              Resultado oficial
+                            </span>
+                          </div>
+                        )}
+
+                        {!match.isResolved ? (
+                          <>
+                            <div>
+                              <p className="label-uppercase step-label">
+                                <span className="step-index">01</span>
+                                Selecciona tu pronóstico
+                              </p>
+                              <div className="pick-grid" role="radiogroup">
+                                {pickOptions.map((option) => (
+                                  <label
+                                    key={option.value}
+                                    className={`pick ${selectedTeam === option.value ? "active" : ""}`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name="betSelection"
+                                      value={option.value}
+                                      checked={selectedTeam === option.value}
+                                      onChange={(e) =>
+                                        setSelectedTeam(e.target.value)
+                                      }
+                                    />
+                                    <span className="label-uppercase pick-key">
+                                      {option.key}
+                                    </span>
+                                    <span className="pick-value">
+                                      {option.label}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label
+                                htmlFor={`bet-amount-${match.id}`}
+                                className="label-uppercase step-label"
+                              >
+                                <span className="step-index">02</span>
+                                Importe a apostar
+                              </label>
+                              <div className="amount-field">
+                                <input
+                                  id={`bet-amount-${match.id}`}
+                                  className="text-input"
+                                  type="number"
+                                  step="0.001"
+                                  min="0.01"
+                                  inputMode="decimal"
+                                  placeholder="0.05"
+                                  value={betAmount}
+                                  onChange={(e) => setBetAmount(e.target.value)}
+                                />
+                                <span className="label-uppercase amount-unit">
+                                  ETH
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              className="btn btn-solid btn-block"
+                              onClick={placeBet}
+                              disabled={!betAmount || Number(betAmount) <= 0}
+                            >
+                              Confirmar Apuesta
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="claim-text">
+                              {canClaim
+                                ? "¡Has ganado la apuesta! Haz clic abajo para retirar tus fondos."
+                                : "El partido ha finalizado. Comprueba si has ganado."}
+                            </p>
+                            <button
+                              className="btn btn-solid btn-block"
+                              onClick={claimReward}
+                              disabled={!canClaim}
+                            >
+                              {match.userBet?.hasClaimed
+                                ? "Premio ya Retirado"
+                                : "Reclamar Premio"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container footer-inner">
+          <span className="brand">
+            <span className="stripe stripe-mini" aria-hidden="true" />
+            DBet
+          </span>
+          <span className="caption">
+            Apuestas descentralizadas en Ethereum Sepolia. Juega con
+            responsabilidad.
+          </span>
+        </div>
+      </footer>
+    </>
   );
 }
