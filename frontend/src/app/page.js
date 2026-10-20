@@ -293,7 +293,8 @@ export default function Home() {
       <header className="top-nav">
         <div className="container top-nav-inner">
           <div className="brand">
-            <span className="stripe stripe-mini" aria-hidden="true" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="brand-logo" src="/logo.svg" alt="" aria-hidden="true" />
             DBet
           </div>
           {!account ? (

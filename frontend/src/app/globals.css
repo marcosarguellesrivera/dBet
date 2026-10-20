@@ -120,6 +120,12 @@ p {
   text-transform: uppercase;
 }
 
+.brand-logo {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
 .wallet-badge {
   display: inline-flex;
   align-items: center;

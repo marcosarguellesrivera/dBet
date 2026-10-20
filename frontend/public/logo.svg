@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="DBet">
+  <rect width="32" height="32" fill="#000000"/>
+  <path fill="#ffffff" fill-rule="evenodd" d="M20 4h4v20H8V11h12z M12 15v5h8v-5z"/>
+  <rect x="8" y="26" width="5.34" height="3" fill="#0066b1"/>
+  <rect x="13.33" y="26" width="5.34" height="3" fill="#1c69d4"/>
+  <rect x="18.66" y="26" width="5.34" height="3" fill="#e22718"/>
+</svg>
